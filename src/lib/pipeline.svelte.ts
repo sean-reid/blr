@@ -9,6 +9,8 @@ import type { Tone } from '$lib/rewrite/types';
 import { decodeSpeech, speak } from '$lib/voice/client';
 import { alignSpeech } from '$lib/voice/align';
 import { speechDuration } from '$lib/voice/warp';
+import { orderByFit, Pace } from '$lib/voice/pace';
+import { tokens } from '$lib/rewrite/client';
 import { trimSilence } from '$lib/audio/silence';
 import { pcmFromBuffer, renderMix, type Spoken } from '$lib/voice/render';
 import { defaultVoice } from '$lib/voice/voices';
@@ -85,6 +87,7 @@ export class Pipeline {
 	range: Range | null = null;
 	private stems: Promise<Pcm | null> | null = null;
 	private index: VisemeIndex | null = null;
+	private pace = new Pace();
 	private bed: Pcm | null = null;
 
 	constructor(private fetcher: typeof fetch = fetch) {}
@@ -357,14 +360,16 @@ export class Pipeline {
 	private async speakFitting(line: Line, voice: string): Promise<Spoken | null> {
 		const rw = this.rewrites[line.id];
 		const target = speechDuration(line.words);
-		const candidates: { text: string; pick: number | null }[] = [];
 		const current = this.text(line.id);
 		if (!current) return null;
-		candidates.push({ text: current, pick: rw?.custom ? null : (rw?.pick ?? null) });
-		if (rw && !rw.custom) {
-			for (let i = 0; i < rw.options.length && candidates.length < FIT_TRIES; i++) {
-				if (i !== rw.pick) candidates.push({ text: rw.options[i].text, pick: i });
-			}
+		let candidates: { text: string; pick: number | null }[];
+		if (!rw || rw.custom) candidates = [{ text: current, pick: null }];
+		else {
+			const all = rw.options.map((o, i) => ({
+				item: { text: o.text, pick: i },
+				syllables: this.syllables(o.text)
+			}));
+			candidates = orderByFit(all, target, this.pace).slice(0, FIT_TRIES);
 		}
 		let best: { spoken: Spoken; score: number; pick: number | null } | null = null;
 		for (const c of candidates) {
@@ -372,6 +377,7 @@ export class Pipeline {
 			const samples = trimSilence(raw, raw.rate);
 			const words = await alignSpeech(samples, raw.rate, c.text, this.fetcher);
 			const spokenLength = speechDuration(words) || samples.length / raw.rate;
+			this.pace.update(this.syllables(c.text), spokenLength);
 			const ratio = target > 0 ? spokenLength / target : 1;
 			const score = Math.abs(Math.log(ratio));
 			if (!best || score < best.score) {
@@ -384,6 +390,11 @@ export class Pipeline {
 			this.rewrites[line.id] = { ...rw, pick: best.pick };
 		}
 		return best.spoken;
+	}
+
+	private syllables(text: string): number {
+		const index = this.index;
+		return tokens(text).reduce((n, w) => n + (index ? index.lookup(w, 'loose').syllables : 1), 0);
 	}
 
 	private dropOutput() {
