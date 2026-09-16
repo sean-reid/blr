@@ -10,6 +10,7 @@ import { pcmFromBuffer, renderMix, type Spoken } from '$lib/voice/render';
 import { defaultVoice } from '$lib/voice/voices';
 import { resample, type Pcm } from '$lib/audio/mix';
 import { outputName } from '$lib/media/names';
+import type { Range } from '$lib/media/range';
 import {
 	MODEL_BYTES,
 	MODEL_SHA256,
@@ -69,22 +70,24 @@ export class Pipeline {
 	separation = $state<Separation>('pending');
 	download = $state<{ loaded: number; total: number } | null>(null);
 	private file: File | null = null;
+	range: Range | null = null;
 	private stems: Promise<Pcm | null> | null = null;
 	private index: VisemeIndex | null = null;
 	private bed: Pcm | null = null;
 
 	constructor(private fetcher: typeof fetch = fetch) {}
 
-	async run(file: File) {
+	async run(file: File, range: Range | null = null) {
 		this.file = file;
+		this.range = range;
 		this.stage = 'reading';
 		this.error = null;
 		try {
 			const indexReady = loadIndex();
 			const buffer = await decodeAudio(file);
-			this.bed = pcmFromBuffer(buffer);
+			this.bed = slicePcm(pcmFromBuffer(buffer), range);
 			this.stems = this.separate(this.bed);
-			const mono = await toMono(buffer, TRANSCRIBE_RATE);
+			const mono = sliceMono(await toMono(buffer, TRANSCRIBE_RATE), TRANSCRIBE_RATE, range);
 			const wav = encodeWav16(mono, TRANSCRIBE_RATE);
 			this.stage = 'listening';
 			const res = await this.fetcher(`/api/transcribe?duration=${buffer.duration.toFixed(3)}`, {
@@ -101,6 +104,7 @@ export class Pipeline {
 			if (!this.lines.length)
 				throw new Error('No speech was heard. Try a clip with clearer voices.');
 			const picked = pickVoices(speakerPitches(mono, TRANSCRIBE_RATE, this.lines));
+			this.lines = shiftLines(this.lines, range?.start ?? 0);
 			for (const l of this.lines)
 				this.voices[l.speaker] ??= picked[l.speaker] ?? defaultVoice(l.speaker);
 			this.stage = 'rewriting';
@@ -215,7 +219,12 @@ export class Pipeline {
 			}
 			this.stage = 'mixing';
 			await new Promise((r) => setTimeout(r));
-			this.mixed = renderMix(bed, spoken, duckBed);
+			const offset = this.range?.start ?? 0;
+			const local = spoken.map((s) => ({
+				...s,
+				line: { ...s.line, start: s.line.start - offset, end: s.line.end - offset }
+			}));
+			this.mixed = renderMix(bed, local, duckBed);
 			this.stale = false;
 			this.dropOutput();
 		} catch (e) {
@@ -232,7 +241,7 @@ export class Pipeline {
 		this.progress = 0;
 		try {
 			const { remux } = await import('$lib/media/remux');
-			const { blob } = await remux(this.file, this.mixed, (p) => (this.progress = p));
+			const { blob } = await remux(this.file, this.mixed, (p) => (this.progress = p), this.range);
 			this.output = { url: URL.createObjectURL(blob), name: outputName(this.file.name) };
 			return this.output;
 		} catch (e) {
@@ -300,6 +309,7 @@ export class Pipeline {
 	reset() {
 		this.dropOutput();
 		this.file = null;
+		this.range = null;
 		this.stage = 'idle';
 		this.error = null;
 		this.transcript = null;
@@ -313,4 +323,26 @@ export class Pipeline {
 		this.separation = 'pending';
 		this.download = null;
 	}
+}
+
+function slicePcm(pcm: Pcm, range: Range | null): Pcm {
+	if (!range) return pcm;
+	const a = Math.round(range.start * pcm.rate);
+	const b = Math.round(range.end * pcm.rate);
+	return { rate: pcm.rate, channels: pcm.channels.map((ch) => ch.slice(a, b)) };
+}
+
+function sliceMono(mono: Float32Array, rate: number, range: Range | null): Float32Array {
+	if (!range) return mono;
+	return mono.slice(Math.round(range.start * rate), Math.round(range.end * rate));
+}
+
+function shiftLines(lines: Line[], offset: number): Line[] {
+	if (!offset) return lines;
+	return lines.map((l) => ({
+		...l,
+		start: l.start + offset,
+		end: l.end + offset,
+		words: l.words.map((w) => ({ ...w, start: w.start + offset, end: w.end + offset }))
+	}));
 }

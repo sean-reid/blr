@@ -14,6 +14,7 @@ import {
 	getFirstEncodableAudioCodec
 } from 'mediabunny';
 import type { Pcm } from '$lib/audio/mix';
+import type { Range } from './range';
 
 export interface RemuxResult {
 	blob: Blob;
@@ -26,7 +27,8 @@ export interface RemuxResult {
 export async function remux(
 	file: Blob,
 	mixed: Pcm,
-	onProgress?: (p: number) => void
+	onProgress?: (p: number) => void,
+	range: Range | null = null
 ): Promise<RemuxResult> {
 	const input = new Input({ formats: [MP4, QTFF, WEBM, MATROSKA], source: new BlobSource(file) });
 	const output = new Output({
@@ -38,6 +40,7 @@ export async function remux(
 		output,
 		video: {},
 		audio: { discard: true },
+		trim: range ? { start: range.start, end: range.end } : undefined,
 		composable: true,
 		showWarnings: false
 	});

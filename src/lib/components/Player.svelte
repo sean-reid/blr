@@ -2,17 +2,20 @@
 	import { onDestroy } from 'svelte';
 	import type { Pcm } from '$lib/audio/mix';
 	import { toAudioBuffer } from '$lib/voice/render';
+	import type { Range } from '$lib/media/range';
 
 	let {
 		src,
 		mixed = null,
 		useMixed = false,
+		range = null,
 		ontime,
 		video = $bindable<HTMLVideoElement | null>(null)
 	}: {
 		src: string;
 		mixed?: Pcm | null;
 		useMixed?: boolean;
+		range?: Range | null;
 		ontime?: (t: number) => void;
 		video?: HTMLVideoElement | null;
 	} = $props();
@@ -44,7 +47,7 @@
 		source = ctx.createBufferSource();
 		source.buffer = buffer;
 		source.connect(ctx.destination);
-		source.start(0, video.currentTime);
+		source.start(0, Math.max(0, video.currentTime - (range?.start ?? 0)));
 		if (ctx.state === 'suspended') ctx.resume();
 	}
 
@@ -69,13 +72,22 @@
 	playsinline
 	preload="metadata"
 	data-audio={useMixed && mixed ? 'new' : 'original'}
-	onplay={start}
+	onplay={() => {
+		if (video && range && (video.currentTime < range.start || video.currentTime >= range.end)) {
+			video.currentTime = range.start;
+		}
+		start();
+	}}
 	onpause={stop}
 	onseeking={() => {
 		if (video && !video.paused) start();
 	}}
 	onended={stop}
-	ontimeupdate={(e) => ontime?.(e.currentTarget.currentTime)}
+	ontimeupdate={(e) => {
+		const t = e.currentTarget.currentTime;
+		if (range && t >= range.end && !e.currentTarget.paused) e.currentTarget.pause();
+		ontime?.(t);
+	}}
 ></video>
 
 <style>
