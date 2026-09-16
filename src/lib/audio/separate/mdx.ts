@@ -64,7 +64,7 @@ export function planChunks(length: number, p: MdxParams, overlap = DEFAULT_OVERL
 	return { chunkSize, trim, step, paddedLength, starts };
 }
 
-/** Symmetric Hann as numpy.hanning, used to crossfade overlapping chunks. */
+/** Symmetric Hann as numpy.hanning, the crossfade between overlapping chunks. */
 export function chunkWindow(n: number): Float64Array {
 	const w = new Float64Array(n);
 	if (n === 1) {
