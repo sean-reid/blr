@@ -58,17 +58,20 @@ export class Session {
 	) {}
 
 	fetch: typeof fetch = async (input, init) => {
-		let res = await this.send(input, init, await this.get());
-		if (res.status === 401) {
-			this.token = null;
-			res = await this.send(input, init, await this.get());
-		}
+		let res = await this.send(input, init, await this.bearer());
+		if (res.status === 401) res = await this.send(input, init, await this.bearer(true));
 		return res;
 	};
 
-	private send(input: RequestInfo | URL, init: RequestInit | undefined, token: string) {
+	/** The Authorization header value; `fresh` drops the cached token first. */
+	async bearer(fresh = false): Promise<string> {
+		if (fresh) this.token = null;
+		return `Bearer ${await this.get()}`;
+	}
+
+	private send(input: RequestInfo | URL, init: RequestInit | undefined, authorization: string) {
 		const headers = new Headers(init?.headers);
-		headers.set('authorization', `Bearer ${token}`);
+		headers.set('authorization', authorization);
 		return fetch(input, { ...init, headers });
 	}
 
