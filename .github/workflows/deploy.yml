@@ -42,7 +42,9 @@ jobs:
         env:
           SITE_KEY: ${{ steps.turnstile.outputs.sitekey }}
       - run: |
-          printf '%s' "$TURNSTILE_SECRET" | pnpm exec wrangler secret put TURNSTILE_SECRET
+          if [ -n "$TURNSTILE_SECRET" ]; then
+            printf '%s' "$TURNSTILE_SECRET" | pnpm exec wrangler secret put TURNSTILE_SECRET
+          fi
           openssl rand -hex 32 | pnpm exec wrangler secret put TOKEN_SECRET
         env:
           TURNSTILE_SECRET: ${{ steps.turnstile.outputs.secret }}
