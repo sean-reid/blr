@@ -1,11 +1,14 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { MAX_SECONDS } from '$lib/media/range';
 
-	let { onfile }: { onfile: (file: File) => void } = $props();
+	let {
+		onfile,
+		ontrim
+	}: { onfile: (file: File) => void; ontrim: (file: File, duration: number) => void } = $props();
 
 	const accept = 'video/mp4,video/quicktime,video/webm,.mp4,.mov,.webm';
 	const MAX_BYTES = 500 * 1024 * 1024;
-	const MAX_SECONDS = 3 * 60;
 	let input: HTMLInputElement;
 	let over = $state(false);
 	let error = $state<string | null>(null);
@@ -54,12 +57,10 @@
 			error = 'That file is over 500 MB. Use a smaller one.';
 			return;
 		}
-		if ((await duration(file)) > MAX_SECONDS) {
-			error = 'That video runs over 3 minutes. Trim it first.';
-			return;
-		}
 		error = null;
-		onfile(file);
+		const seconds = await duration(file);
+		if (seconds > MAX_SECONDS) ontrim(file, seconds);
+		else onfile(file);
 	}
 
 	function ondrop(e: DragEvent) {
@@ -93,7 +94,7 @@
 	{ondrop}
 >
 	<p class="lead">Drop a video.</p>
-	<p class="hint muted">MP4, MOV, WebM. Up to 3 minutes.</p>
+	<p class="hint muted">MP4, MOV, WebM. Longer than 3 minutes gets trimmed.</p>
 	{#if error}
 		<p class="error" role="alert">{error}</p>
 	{/if}

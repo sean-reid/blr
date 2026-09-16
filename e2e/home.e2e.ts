@@ -60,7 +60,7 @@ test('refuses a file over 500 MB before upload', async ({ page }) => {
 	expect(uploads).toHaveLength(0);
 });
 
-test('refuses a video over 3 minutes before upload', async ({ page }) => {
+test('offers a trim window for a video over 3 minutes before any upload', async ({ page }) => {
 	const uploads: string[] = [];
 	page.on('request', (r) => r.url().includes('/api/') && uploads.push(r.url()));
 	await page.addInitScript(() => {
@@ -72,12 +72,11 @@ test('refuses a video over 3 minutes before upload', async ({ page }) => {
 		mimeType: 'video/mp4',
 		buffer: readFileSync('static/sample.mp4')
 	});
-	await expect(page.getByRole('alert')).toHaveText(
-		'That video runs over 3 minutes. Trim it first.'
-	);
-	await expect(page.locator('video')).toHaveCount(0);
+	await expect(page.getByRole('slider', { name: 'End' })).toHaveAttribute('aria-valuenow', '180');
+	await expect(page.getByRole('button', { name: 'Use this part' })).toBeVisible();
 	expect(uploads).toHaveLength(0);
-	await page.screenshot({ path: 'test-results/drop-too-long.png', fullPage: true });
+	await page.setViewportSize({ width: 375, height: 740 });
+	await page.screenshot({ path: 'test-results/trim-mobile.png', fullPage: true });
 });
 
 test('the landing page carries social metadata and preloads its font', async ({
