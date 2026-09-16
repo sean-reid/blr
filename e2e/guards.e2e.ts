@@ -67,7 +67,7 @@ test.describe('in the browser', () => {
 		await expect(page.locator('.lines li .new').first()).toBeVisible({ timeout: 30_000 });
 		expect(turnstile.length).toBeGreaterThan(0);
 		await page.getByRole('button', { name: 'Voice it' }).click();
-		await expect(page.getByRole('button', { name: 'Voiced' })).toBeVisible({ timeout: 60_000 });
+		await expect(page.getByRole('button', { name: 'Download' })).toBeVisible({ timeout: 60_000 });
 		expect(tokens).toHaveLength(1);
 		await expect(page.getByRole('alert')).toHaveCount(0);
 		await page.screenshot({ path: 'test-results/guards-flow.png', fullPage: true });

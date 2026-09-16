@@ -47,7 +47,7 @@ test('rejects a non-video file', async ({ page }) => {
 test('refuses a file over 500 MB before upload', async ({ page }) => {
 	const uploads: string[] = [];
 	page.on('request', (r) => r.url().includes('/api/') && uploads.push(r.url()));
-	await page.goto('/');
+	await page.goto('/', { waitUntil: 'networkidle' });
 	await page.evaluate(() => {
 		const file = new File([new Uint8Array(16)], 'huge.mp4', { type: 'video/mp4' });
 		Object.defineProperty(file, 'size', { value: 501 * 1024 * 1024 });
