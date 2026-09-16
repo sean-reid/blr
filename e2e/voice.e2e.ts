@@ -19,7 +19,7 @@ test.describe('voicing', () => {
 		});
 		await page.getByRole('button', { name: 'Voice it' }).click();
 		await expect(page.getByRole('button', { name: 'Download' })).toBeVisible({ timeout: 60_000 });
-		expect(speakCalls).toBe(9);
+		expect(speakCalls).toBeGreaterThanOrEqual(9);
 		await expect(page.locator('video')).toHaveAttribute('data-audio', 'new');
 		await page.getByLabel('New audio').uncheck();
 		await expect(page.locator('video')).toHaveAttribute('data-audio', 'original');

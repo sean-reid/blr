@@ -1,5 +1,7 @@
 export const MIN_RATIO = 0.8;
 export const MAX_RATIO = 1.25;
+export const WIDE_MIN_RATIO = 0.7;
+export const WIDE_MAX_RATIO = 1.5;
 
 // WSOLA time stretch for speech: ratio > 1 lengthens, < 1 shortens. Pitch is
 // preserved because whole waveform periods are repeated or dropped.
@@ -44,9 +46,11 @@ export function stretch(input: Float32Array, ratio: number, rate: number): Float
 	return result;
 }
 
-export function fitRatio(source: number, target: number): number {
+export function fitRatio(source: number, target: number, wide = false): number {
 	if (source <= 0) return 1;
-	return Math.min(MAX_RATIO, Math.max(MIN_RATIO, target / source));
+	const lo = wide ? WIDE_MIN_RATIO : MIN_RATIO;
+	const hi = wide ? WIDE_MAX_RATIO : MAX_RATIO;
+	return Math.min(hi, Math.max(lo, target / source));
 }
 
 function hann(n: number): Float32Array {

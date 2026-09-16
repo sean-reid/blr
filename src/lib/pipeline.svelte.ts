@@ -7,6 +7,9 @@ import type { VisemeIndex } from '$lib/viseme/index';
 import { rewriteAll, rewriteOne, scoreText, type Ranked } from '$lib/rewrite/client';
 import type { Tone } from '$lib/rewrite/types';
 import { decodeSpeech, speak } from '$lib/voice/client';
+import { alignSpeech } from '$lib/voice/align';
+import { speechDuration } from '$lib/voice/warp';
+import { trimSilence } from '$lib/audio/silence';
 import { pcmFromBuffer, renderMix, type Spoken } from '$lib/voice/render';
 import { defaultVoice } from '$lib/voice/voices';
 import { resample, restore, type Pcm } from '$lib/audio/mix';
@@ -35,6 +38,11 @@ export type Stage =
 	| 'failed';
 
 export type Separation = 'pending' | 'ready' | 'unavailable';
+
+const FIT_TRIES = 3;
+const VOICE_CONCURRENCY = 3;
+const FIT_MIN = 0.75;
+const FIT_MAX = 1.35;
 
 export const STAGE_LABEL: Record<Stage, string> = {
 	idle: '',
@@ -229,15 +237,19 @@ export class Pipeline {
 		this.stage = 'voicing';
 		this.error = null;
 		try {
-			const spoken: Spoken[] = [];
-			for (const line of audible(this.lines, this.muted)) {
-				const text = this.text(line.id);
-				if (!text) continue;
-				const voice = this.voices[line.speaker] ?? defaultVoice(line.speaker);
-				const bytes = await speak(text, voice, this.fetcher);
-				const samples = await decodeSpeech(bytes);
-				spoken.push({ line, samples, rate: samples.rate });
-			}
+			const lines = audible(this.lines, this.muted);
+			const results: (Spoken | null)[] = new Array(lines.length).fill(null);
+			let next = 0;
+			const worker = async () => {
+				while (next < lines.length) {
+					const i = next++;
+					const line = lines[i];
+					const voice = this.voices[line.speaker] ?? defaultVoice(line.speaker);
+					results[i] = await this.speakFitting(line, voice);
+				}
+			};
+			await Promise.all(Array.from({ length: VOICE_CONCURRENCY }, worker));
+			const spoken = results.filter((r): r is Spoken => r !== null);
 			let bed = this.bed;
 			let duckBed = true;
 			if (this.separation === 'pending' && this.stems) {
@@ -337,6 +349,40 @@ export class Pipeline {
 			this.separation = 'unavailable';
 			return null;
 		}
+	}
+
+	// Speaks the chosen reading and, when its spoken length is far from the
+	// mouth movement, the next ranked readings too, keeping the closest fit.
+	private async speakFitting(line: Line, voice: string): Promise<Spoken | null> {
+		const rw = this.rewrites[line.id];
+		const target = speechDuration(line.words);
+		const candidates: { text: string; pick: number | null }[] = [];
+		const current = this.text(line.id);
+		if (!current) return null;
+		candidates.push({ text: current, pick: rw?.custom ? null : (rw?.pick ?? null) });
+		if (rw && !rw.custom) {
+			for (let i = 0; i < rw.options.length && candidates.length < FIT_TRIES; i++) {
+				if (i !== rw.pick) candidates.push({ text: rw.options[i].text, pick: i });
+			}
+		}
+		let best: { spoken: Spoken; score: number; pick: number | null } | null = null;
+		for (const c of candidates) {
+			const raw = await decodeSpeech(await speak(c.text, voice, this.fetcher));
+			const samples = trimSilence(raw, raw.rate);
+			const words = await alignSpeech(samples, raw.rate, c.text, this.fetcher);
+			const spokenLength = speechDuration(words) || samples.length / raw.rate;
+			const ratio = target > 0 ? spokenLength / target : 1;
+			const score = Math.abs(Math.log(ratio));
+			if (!best || score < best.score) {
+				best = { spoken: { line, samples, rate: raw.rate, words }, score, pick: c.pick };
+			}
+			if (ratio >= FIT_MIN && ratio <= FIT_MAX) break;
+		}
+		if (!best) return null;
+		if (best.pick !== null && rw && !rw.custom && best.pick !== rw.pick) {
+			this.rewrites[line.id] = { ...rw, pick: best.pick };
+		}
+		return best.spoken;
 	}
 
 	private dropOutput() {
