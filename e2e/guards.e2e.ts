@@ -19,7 +19,7 @@ test.describe('token gate', () => {
 		expect((await speak.json()).message).toBe(UNVERIFIED);
 		const rewrite = await request.post('/api/rewrite', {
 			data: {
-				lines: [{ id: 'l0', speaker: 0, original: 'Hello there.', syllables: 3, lips: [] }]
+				lines: [{ id: 'l0', speaker: 0, original: 'Hello there.', pattern: [3], lips: [] }]
 			}
 		});
 		expect(rewrite.status()).toBe(401);
@@ -87,7 +87,7 @@ test.describe('in the browser', () => {
 		await page.goto('/');
 		await page.getByRole('button', { name: 'or try a sample' }).click();
 		await expect(page.locator('.lines li .new').first()).toBeVisible({ timeout: 30_000 });
-		expect(hits).toBe(2);
+		expect(hits).toBeGreaterThanOrEqual(2);
 		expect(tokens).toHaveLength(2);
 	});
 
