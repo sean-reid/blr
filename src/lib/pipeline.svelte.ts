@@ -9,7 +9,7 @@ import type { Tone } from '$lib/rewrite/types';
 import { decodeSpeech, speak } from '$lib/voice/client';
 import { alignSpeech } from '$lib/voice/align';
 import { speechDuration } from '$lib/voice/warp';
-import { orderByFit, Pace } from '$lib/voice/pace';
+import { Pace } from '$lib/voice/pace';
 import { tokens } from '$lib/rewrite/client';
 import { trimSilence } from '$lib/audio/silence';
 import { pcmFromBuffer, renderMix, type Spoken } from '$lib/voice/render';
@@ -42,10 +42,7 @@ export type Stage =
 
 export type Separation = 'pending' | 'ready' | 'unavailable';
 
-const FIT_TRIES = 3;
 const VOICE_CONCURRENCY = 3;
-const FIT_MIN = 0.75;
-const FIT_MAX = 1.35;
 
 export const STAGE_LABEL: Record<Stage, string> = {
 	idle: '',
@@ -88,6 +85,7 @@ export class Pipeline {
 	private stems: Promise<Pcm | null> | null = null;
 	private index: VisemeIndex | null = null;
 	private pace = new Pace();
+	private spokenCache: Record<string, Spoken> = {};
 	private bed: Pcm | null = null;
 
 	constructor(private fetcher: typeof fetch = fetch) {}
@@ -124,7 +122,7 @@ export class Pipeline {
 				this.voices[l.speaker] ??= picked[l.speaker] ?? defaultVoice(l.speaker);
 			this.stage = 'rewriting';
 			this.index = await indexReady;
-			this.fill(await rewriteAll(this.index, this.lines, this.tone, this.fetcher));
+			this.fill(await rewriteAll(this.index, this.lines, this.tone, this.fetcher, this.pace.rate));
 			this.stage = 'ready';
 		} catch (e) {
 			this.error = e instanceof Error ? e.message : String(e);
@@ -176,7 +174,8 @@ export class Pipeline {
 				this.lines[i],
 				neighbours,
 				this.tone,
-				this.fetcher
+				this.fetcher,
+				this.pace.rate
 			);
 			const known = rw.options.map((o) => o.text);
 			const options = [...rw.options, ...fresh.filter((o) => !known.includes(o.text))];
@@ -227,7 +226,7 @@ export class Pipeline {
 		this.stage = 'rewriting';
 		this.error = null;
 		try {
-			this.fill(await rewriteAll(this.index, this.lines, tone, this.fetcher));
+			this.fill(await rewriteAll(this.index, this.lines, tone, this.fetcher, this.pace.rate));
 			this.stale = !!this.mixed;
 		} catch (e) {
 			this.error = e instanceof Error ? e.message : String(e);
@@ -355,41 +354,20 @@ export class Pipeline {
 		}
 	}
 
-	// Speaks the chosen reading and, when its spoken length is far from the
-	// mouth movement, the next ranked readings too, keeping the closest fit.
+	// Speaks exactly the reading on screen, once per distinct text and voice.
 	private async speakFitting(line: Line, voice: string): Promise<Spoken | null> {
-		const rw = this.rewrites[line.id];
-		const target = speechDuration(line.words);
-		const current = this.text(line.id);
-		if (!current) return null;
-		let candidates: { text: string; pick: number | null }[];
-		if (!rw || rw.custom) candidates = [{ text: current, pick: null }];
-		else {
-			const all = rw.options.map((o, i) => ({
-				item: { text: o.text, pick: i },
-				syllables: this.syllables(o.text)
-			}));
-			candidates = orderByFit(all, target, this.pace).slice(0, FIT_TRIES);
-		}
-		let best: { spoken: Spoken; score: number; pick: number | null } | null = null;
-		for (const c of candidates) {
-			const raw = await decodeSpeech(await speak(c.text, voice, this.fetcher));
-			const samples = trimSilence(raw, raw.rate);
-			const words = await alignSpeech(samples, raw.rate, c.text, this.fetcher);
-			const spokenLength = speechDuration(words) || samples.length / raw.rate;
-			this.pace.update(this.syllables(c.text), spokenLength);
-			const ratio = target > 0 ? spokenLength / target : 1;
-			const score = Math.abs(Math.log(ratio));
-			if (!best || score < best.score) {
-				best = { spoken: { line, samples, rate: raw.rate, words }, score, pick: c.pick };
-			}
-			if (ratio >= FIT_MIN && ratio <= FIT_MAX) break;
-		}
-		if (!best) return null;
-		if (best.pick !== null && rw && !rw.custom && best.pick !== rw.pick) {
-			this.rewrites[line.id] = { ...rw, pick: best.pick };
-		}
-		return best.spoken;
+		const text = this.text(line.id);
+		if (!text) return null;
+		const key = `${voice}|${text}`;
+		const cached = this.spokenCache[key];
+		if (cached) return { ...cached, line };
+		const raw = await decodeSpeech(await speak(text, voice, this.fetcher));
+		const samples = trimSilence(raw, raw.rate);
+		const words = await alignSpeech(samples, raw.rate, text, this.fetcher);
+		this.pace.update(this.syllables(text), speechDuration(words) || samples.length / raw.rate);
+		const spoken: Spoken = { line, samples, rate: raw.rate, words };
+		this.spokenCache[key] = spoken;
+		return spoken;
 	}
 
 	private syllables(text: string): number {
@@ -418,6 +396,7 @@ export class Pipeline {
 		this.stale = false;
 		this.bed = null;
 		this.stems = null;
+		this.spokenCache = {};
 		this.separation = 'pending';
 		this.download = null;
 	}
