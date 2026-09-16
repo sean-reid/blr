@@ -14,6 +14,15 @@ export interface NovaResponse {
 	};
 }
 
+export interface ChatRequest {
+	system: string;
+	user: string;
+	schema: object;
+	maxTokens: number;
+	temperature: number;
+}
+
 export interface AiClient {
 	transcribe(audio: ReadableStream<Uint8Array>, contentType: string): Promise<NovaResponse>;
+	chatJson(req: ChatRequest): Promise<unknown>;
 }
