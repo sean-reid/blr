@@ -1,9 +1,13 @@
 <script lang="ts">
-	let { label }: { label: string } = $props();
+	let { label, fraction = null }: { label: string; fraction?: number | null } = $props();
 </script>
 
 <div class="progress" role="status" aria-live="polite">
-	<div class="bar"></div>
+	{#if fraction === null}
+		<div class="bar sweep"></div>
+	{:else}
+		<div class="bar" style:transform="scaleX({Math.max(0.02, Math.min(1, fraction))})"></div>
+	{/if}
 	<p class="label">{label}</p>
 </div>
 
@@ -25,6 +29,10 @@
 		height: 2px;
 		background: var(--accent);
 		transform-origin: left;
+		transition: transform var(--t-fast) linear;
+	}
+
+	.sweep {
 		animation: sweep 1.6s var(--ease) infinite;
 	}
 

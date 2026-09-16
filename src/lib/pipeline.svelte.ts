@@ -9,9 +9,18 @@ import { decodeSpeech, speak } from '$lib/voice/client';
 import { pcmFromBuffer, renderMix, type Spoken } from '$lib/voice/render';
 import { defaultVoice } from '$lib/voice/voices';
 import type { Pcm } from '$lib/audio/mix';
+import { outputName, remux } from '$lib/media/remux';
 
 export type Stage =
-	'idle' | 'reading' | 'listening' | 'rewriting' | 'ready' | 'voicing' | 'mixing' | 'failed';
+	| 'idle'
+	| 'reading'
+	| 'listening'
+	| 'rewriting'
+	| 'ready'
+	| 'voicing'
+	| 'mixing'
+	| 'exporting'
+	| 'failed';
 
 export const STAGE_LABEL: Record<Stage, string> = {
 	idle: '',
@@ -21,6 +30,7 @@ export const STAGE_LABEL: Record<Stage, string> = {
 	ready: '',
 	voicing: 'Voicing.',
 	mixing: 'Mixing.',
+	exporting: 'Exporting.',
 	failed: ''
 };
 
@@ -41,10 +51,14 @@ export class Pipeline {
 	voices = $state<Record<number, string>>({});
 	mixed = $state<Pcm | null>(null);
 	stale = $state(false);
+	output = $state<{ url: string; name: string } | null>(null);
+	progress = $state(0);
+	private file: File | null = null;
 	private index: VisemeIndex | null = null;
 	private bed: Pcm | null = null;
 
 	async run(file: File) {
+		this.file = file;
 		this.stage = 'reading';
 		this.error = null;
 		try {
@@ -162,6 +176,7 @@ export class Pipeline {
 			await new Promise((r) => setTimeout(r));
 			this.mixed = renderMix(this.bed, spoken);
 			this.stale = false;
+			this.dropOutput();
 		} catch (e) {
 			this.error = e instanceof Error ? e.message : String(e);
 		} finally {
@@ -169,7 +184,31 @@ export class Pipeline {
 		}
 	}
 
+	async export() {
+		if (!this.file || !this.mixed || this.stage !== 'ready') return null;
+		if (this.output) return this.output;
+		this.stage = 'exporting';
+		this.progress = 0;
+		try {
+			const { blob } = await remux(this.file, this.mixed, (p) => (this.progress = p));
+			this.output = { url: URL.createObjectURL(blob), name: outputName(this.file.name) };
+			return this.output;
+		} catch (e) {
+			this.error = e instanceof Error ? e.message : String(e);
+			return null;
+		} finally {
+			this.stage = 'ready';
+		}
+	}
+
+	private dropOutput() {
+		if (this.output) URL.revokeObjectURL(this.output.url);
+		this.output = null;
+	}
+
 	reset() {
+		this.dropOutput();
+		this.file = null;
 		this.stage = 'idle';
 		this.error = null;
 		this.transcript = null;

@@ -42,6 +42,15 @@
 		pipeline.reset();
 	}
 
+	async function download() {
+		const out = await pipeline.export();
+		if (!out) return;
+		const a = document.createElement('a');
+		a.href = out.url;
+		a.download = out.name;
+		a.click();
+	}
+
 	function seek(t: number) {
 		if (!video) return;
 		video.currentTime = t;
@@ -54,7 +63,10 @@
 		<div class="frame">
 			<Player src={url} mixed={pipeline.mixed} {useMixed} bind:video ontime={(t) => (time = t)} />
 			{#if busy}
-				<Progress label={STAGE_LABEL[pipeline.stage]} />
+				<Progress
+					label={STAGE_LABEL[pipeline.stage]}
+					fraction={pipeline.stage === 'exporting' ? pipeline.progress : null}
+				/>
 			{/if}
 		</div>
 
@@ -89,14 +101,23 @@
 							New audio
 						</label>
 					{/if}
-					<button
-						type="button"
-						class="primary"
-						disabled={busy || pipeline.stage !== 'ready'}
-						onclick={() => pipeline.voice()}
-					>
-						{pipeline.mixed ? (pipeline.stale ? 'Voice it again' : 'Voiced') : 'Voice it'}
-					</button>
+					{#if pipeline.mixed && !pipeline.stale}
+						<button type="button" class="plain" disabled={busy} onclick={() => pipeline.voice()}>
+							Voice it again
+						</button>
+						<button type="button" class="primary" disabled={busy} onclick={download}>
+							Download
+						</button>
+					{:else}
+						<button
+							type="button"
+							class="primary"
+							disabled={busy || pipeline.stage !== 'ready'}
+							onclick={() => pipeline.voice()}
+						>
+							{pipeline.mixed ? 'Voice it again' : 'Voice it'}
+						</button>
+					{/if}
 				</div>
 			</div>
 		{/if}
@@ -159,6 +180,16 @@
 		width: 16px;
 		height: 16px;
 		margin: 0;
+	}
+
+	.plain {
+		min-height: var(--tap);
+		padding-inline: 4px;
+		color: var(--ink-muted);
+	}
+
+	.plain:hover:not(:disabled) {
+		color: var(--ink);
 	}
 
 	.primary {
