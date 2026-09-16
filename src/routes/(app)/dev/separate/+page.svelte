@@ -3,14 +3,14 @@
 	import { SAMPLE_RATE } from '$lib/audio/separate/mdx';
 	import { VocalSeparator, type Provider, type Stems } from '$lib/audio/separate/separate';
 
-	const DEFAULT_MODEL = '/models/Kim_Vocal_2.onnx';
+	import { MODEL_URL, runtimeUrl as defaultRuntimeUrl } from '$lib/audio/separate/config';
 	const providerChoices: { label: string; value: Provider[] }[] = [
 		{ label: 'WebGPU, then WASM', value: ['webgpu', 'wasm'] },
 		{ label: 'WebGPU only', value: ['webgpu'] },
 		{ label: 'WASM only', value: ['wasm'] }
 	];
 
-	let modelUrl = $state(DEFAULT_MODEL);
+	let modelUrl = $state(MODEL_URL);
 	let runtimeUrl = $state('');
 	let providerIndex = $state(0);
 	let file = $state<File | null>(null);
@@ -59,7 +59,7 @@
 			const t0 = performance.now();
 			separator = await VocalSeparator.load(modelUrl, {
 				providers: providerChoices[providerIndex].value,
-				runtimeUrl: runtimeUrl || undefined,
+				runtimeUrl: runtimeUrl || defaultRuntimeUrl(),
 				onDownload: (loaded, total) => (download = { loaded, total })
 			});
 			const t1 = performance.now();
