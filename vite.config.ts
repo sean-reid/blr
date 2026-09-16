@@ -39,7 +39,8 @@ export default defineConfig({
 				platformProxy: {
 					configPath: process.env.BLR_LIVE ? 'wrangler.jsonc' : 'wrangler.dev.jsonc'
 				}
-			})
+			}),
+			version: { pollInterval: 60_000 }
 		})
 	],
 	worker: { plugins: () => [ortExternalWasm()] },

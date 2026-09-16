@@ -14,6 +14,7 @@ import { pcmFromBuffer, renderMix, type Spoken } from '$lib/voice/render';
 import { defaultVoice } from '$lib/voice/voices';
 import { resample, restore, type Pcm } from '$lib/audio/mix';
 import { outputName } from '$lib/media/names';
+import { lazy } from '$lib/lazy';
 import type { Range } from '$lib/media/range';
 import {
 	MODEL_BYTES,
@@ -290,7 +291,7 @@ export class Pipeline {
 		this.stage = 'exporting';
 		this.progress = 0;
 		try {
-			const { remux } = await import('$lib/media/remux');
+			const { remux } = await lazy(() => import('$lib/media/remux'));
 			const { blob } = await remux(this.file, this.mixed, (p) => (this.progress = p), this.range);
 			this.output = { url: URL.createObjectURL(blob), name: outputName(this.file.name) };
 			return this.output;
@@ -329,7 +330,7 @@ export class Pipeline {
 			}
 			this.download = null;
 			if ((await sha256Hex(bytes.buffer)) !== MODEL_SHA256) throw new Error('model hash mismatch');
-			const { VocalSeparator } = await import('$lib/audio/separate/separate');
+			const { VocalSeparator } = await lazy(() => import('$lib/audio/separate/separate'));
 			const separator = await VocalSeparator.load(bytes.buffer, { runtimeUrl: runtimeUrl() });
 			try {
 				const left = resample(bed.channels[0], bed.rate, SAMPLE_RATE);
