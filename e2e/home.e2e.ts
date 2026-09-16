@@ -93,7 +93,10 @@ test('the landing page carries social metadata and preloads its font', async ({
 		'content',
 		'summary_large_image'
 	);
-	await expect(page.locator('link[rel="preload"][as="font"]')).toHaveCount(1);
+	const home = await request.get('/');
+	const link = home.headers()['link'] ?? '';
+	expect(link).toContain('as="font"');
+	expect(link).not.toContain('italic');
 	const og = await request.get('/og.png');
 	expect(og.status()).toBe(200);
 	expect(og.headers()['content-type']).toContain('image/png');
