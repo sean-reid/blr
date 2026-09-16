@@ -6,7 +6,7 @@ const req: RewriteRequest = {
 	speakers: 2,
 	tone: 'pg13',
 	options: 4,
-	lines: [{ id: 'l0', speaker: 0, original: 'Oh, okay, dad.', syllables: 4, lips: [2] }]
+	lines: [{ id: 'l0', speaker: 0, original: 'Oh, okay, dad.', pattern: [1, 2, 1], lips: [3] }]
 };
 
 describe('userMessage', () => {
@@ -14,7 +14,7 @@ describe('userMessage', () => {
 		const m = userMessage(req);
 		expect(m).toContain('2 people are talking, speakers 0 to 1. Write 4 options per line.');
 		expect(m).toContain(
-			'Line l0, speaker 0, 4 syllables; lips press at syllables 2: "Oh, okay, dad."'
+			'Line l0, speaker 0: 1 + 2 + 1 = 4 syllables; lips press at word 3 of the original. Original: "Oh, okay, dad."'
 		);
 		expect(m).not.toContain('No profanity');
 	});

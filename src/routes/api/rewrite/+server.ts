@@ -17,8 +17,13 @@ function check(body: unknown): RewriteRequest {
 	for (const l of b.lines) {
 		if (typeof l.id !== 'string' || typeof l.original !== 'string') error(400, 'Bad line.');
 		if (l.original.length > MAX_TEXT) error(400, 'Line too long.');
-		if (!Number.isInteger(l.syllables) || l.syllables < 1 || l.syllables > 60)
-			error(400, 'Bad syllables.');
+		if (
+			!Array.isArray(l.pattern) ||
+			!l.pattern.length ||
+			l.pattern.length > 40 ||
+			!l.pattern.every((n) => Number.isInteger(n) && n >= 1 && n <= 60)
+		)
+			error(400, 'Bad pattern.');
 		if (!Array.isArray(l.lips) || l.lips.length > 40) error(400, 'Bad cues.');
 	}
 	const options = Math.min(MAX_OPTIONS, Math.max(3, Number(b.options) || 6));
@@ -27,7 +32,7 @@ function check(body: unknown): RewriteRequest {
 			id: l.id,
 			speaker: Number(l.speaker) || 0,
 			original: l.original,
-			syllables: l.syllables,
+			pattern: l.pattern,
 			lips: l.lips.map(Number).filter((n) => Number.isInteger(n) && n > 0)
 		})),
 		speakers: Math.min(8, Math.max(1, Number(b.speakers) || 1)),
@@ -41,7 +46,7 @@ export const POST: RequestHandler = async (event) => {
 	const { request, platform } = event;
 	const req = check(await request.json().catch(() => error(400, 'Bad JSON.')));
 	await guard(event, NEURONS.rewrite);
-	const syllables = req.lines.reduce((n, l) => n + l.syllables, 0);
+	const syllables = req.lines.reduce((n, l) => n + l.pattern.reduce((a, b) => a + b, 0), 0);
 	const raw = await aiClient(platform).chatJson({
 		system: SYSTEM,
 		user: userMessage(req),

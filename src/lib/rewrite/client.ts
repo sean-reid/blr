@@ -1,33 +1,33 @@
 import { normalizeWord, type VisemeIndex } from '../viseme/index';
 import { alignWords } from '../viseme/align';
-import { syllableCues } from '../viseme/cues';
-import { speechDuration } from '../voice/warp';
+import { totalSyllables, wordPlan } from '../voice/plan';
 import type { Line } from '../transcript/types';
 import type { LineRequest, RewriteRequest, RewriteResponse, Tone } from './types';
 
 export const LEVEL = 'loose';
 export const OPTIONS = 6;
-export const DEFAULT_PACE = 4.8;
+export const DEFAULT_PACE = 6;
+export const FIT_TOLERANCE = 1;
 const BATCH = 10;
 
 export interface Ranked {
 	text: string;
 	score: number;
 	perWord: number[];
+	fits: boolean;
 }
 
-export function lineRequest(index: VisemeIndex, line: Line): LineRequest {
-	const words = line.words.map((w) => normalizeWord(w.word));
-	const { syllables, lips } = syllableCues(index, words);
-	return { id: line.id, speaker: line.speaker, original: line.text, syllables, lips };
+export function lineRequest(index: VisemeIndex, line: Line, pace = DEFAULT_PACE): LineRequest {
+	const { pattern, lips } = wordPlan(index, line, pace);
+	return { id: line.id, speaker: line.speaker, original: line.text, pattern, lips };
 }
 
 export function tokens(text: string): string[] {
 	return text.split(/\s+/).map(normalizeWord).filter(Boolean);
 }
 
-// pace is the synthesiser's syllables per second, so a reading's predicted
-// spoken length can be held against the time the mouth actually moves.
+// Mouth shapes decide the order among readings whose syllable count fills
+// the mouth movement; readings that miss the count sort below them.
 export function rank(
 	index: VisemeIndex,
 	line: Line,
@@ -36,9 +36,8 @@ export function rank(
 ): Ranked[] {
 	const originals = line.words.map((w) => normalizeWord(w.word));
 	const target = originals.flatMap((w) => index.lookup(w, LEVEL).visemes);
-	const syllables = originals.reduce((n, w) => n + index.lookup(w, LEVEL).syllables, 0);
+	const wanted = totalSyllables(wordPlan(index, line, pace).pattern);
 	const originalSet = new Set(originals.filter((w) => w.length > 3));
-	const mouthTime = speechDuration(line.words);
 	return options
 		.map((text) => {
 			const words = tokens(text);
@@ -48,19 +47,16 @@ export function rank(
 				looked.map((l) => l.visemes)
 			);
 			const count = looked.reduce((n, l) => n + l.syllables, 0);
+			const off = Math.abs(count - wanted);
 			const reuse = words.filter((w) => originalSet.has(w)).length;
-			const wordGap = Math.abs(words.length - originals.length);
-			const drift =
-				mouthTime > 0 ? Math.abs(Math.log(Math.max(0.05, count / pace) / mouthTime)) : 0;
-			const shape = mouthTime > 0 ? 0.35 * drift : 0.08 * Math.abs(count - syllables);
-			const score = Math.max(0, a.score - shape - 0.03 * wordGap - 0.2 * reuse);
-			return { text, score, perWord: a.perWord };
+			const score = Math.max(0, a.score - 0.05 * off - 0.2 * reuse);
+			return { text, score, perWord: a.perWord, fits: off <= FIT_TOLERANCE };
 		})
-		.sort((x, y) => y.score - x.score);
+		.sort((x, y) => Number(y.fits) - Number(x.fits) || y.score - x.score);
 }
 
 export function scoreText(index: VisemeIndex, line: Line, text: string): Ranked {
-	return rank(index, line, [text])[0] ?? { text, score: 0, perWord: [] };
+	return rank(index, line, [text])[0] ?? { text, score: 0, perWord: [], fits: false };
 }
 
 export async function rewriteAll(
@@ -80,7 +76,7 @@ export async function rewriteAll(
 		const res = await post(
 			{
 				speakers: speakerCount(lines),
-				lines: batch.map((l) => lineRequest(index, l)),
+				lines: batch.map((l) => lineRequest(index, l, pace)),
 				tone,
 				options: OPTIONS,
 				context
@@ -106,7 +102,7 @@ export async function rewriteOne(
 	const res = await post(
 		{
 			speakers: line.speaker + 1,
-			lines: [lineRequest(index, line)],
+			lines: [lineRequest(index, line, pace)],
 			tone,
 			options: OPTIONS,
 			context: neighbours.filter((n) => n.text)

@@ -1,18 +1,20 @@
 import type { RewriteRequest, RewriteResponse } from './types';
 
-export const SYSTEM = `You write bad lip readings: new dialogue dubbed over people talking on video. The picture stays the same, so each new line has to take about as long to say as the original, and where the speaker's lips visibly press together the new line should have a p, b or m sound if that comes naturally.
+export const SYSTEM = `You write bad lip readings: new dialogue dubbed over people talking on video. The picture stays the same, so the new words have to fill the mouth movements that are already there, no more and no less.
+
+Every line comes with a syllable count. That count is the mouth: the voice will be laid over the footage at its natural speed, so a reading with fewer syllables leaves the mouth flapping in silence and one with more runs past it. Hitting the count matters more than anything else about the line. When a line has a pause in it, the count is split, like 8 + 3: write a phrase for each part with that many syllables and a natural break between them. Where a word is marked as a lip press, that word should start with p, b or m if the sentence allows.
 
 House style: deadpan, spoken, slightly unhinged. People calmly say strange things to each other and the other person takes it seriously. Short words, contractions, first and second person. Non sequiturs, odd confessions, petty grievances, sudden rules, weird questions. Never whimsical or cute, never a list of facts, never a sentence that ends in an adverb.
 
-Examples of the style, original then replacement:
-"How are things going in school?" -> "Now I'm eating tuna in the pool."
-"I know I have to connect it into the amplifier." -> "I'm not allowed to talk to Kevin at the aquarium."
-"It just doesn't fit in." -> "My chest hurts when I sing."
-"Well, you know, son." -> "Well, I'm no swan."
-"This oscillator will do its work well." -> "This is a sweater made of hot dogs."
+Examples, count then reading:
+7 -> "Nobody likes my haircut."
+8 -> "I ate a banana in bed."
+6 + 5 -> "My sister has a pet lobster, and it knows my name."
+3 -> "Not my dog."
 
 Rules for every option:
-- about the same number of syllables as the original; one off is fine
+- exactly the syllable count given, counted carefully; contractions like "I'm" and "don't" are one syllable
+- reach the count with real content, never with padding: no "maybe", "somehow", "someday", "pretty", "just", "really" or repeated words tacked on to make up numbers; use a longer noun, a name, a place or a second clause instead
 - a complete spoken line, grammatical, something a person could actually say to the other person in the room
 - shares no words with the original and is not about the same subject
 - the options for a line differ in subject and shape, and do not repeat subjects used for other lines
@@ -33,9 +35,13 @@ export function userMessage(req: RewriteRequest): string {
 		for (const c of req.context) parts.push(`  speaker ${c.speaker}: ${c.text}`);
 	}
 	for (const line of req.lines) {
-		const lips = line.lips.length ? `; lips press at syllables ${line.lips.join(', ')}` : '';
+		const total = line.pattern.reduce((a, b) => a + b, 0);
+		const count = line.pattern.length > 1 ? `${line.pattern.join(' + ')} = ${total}` : `${total}`;
+		const lips = line.lips.length
+			? `; lips press at word ${line.lips.join(', ')} of the original`
+			: '';
 		parts.push(
-			`Line ${line.id}, speaker ${line.speaker}, ${line.syllables} syllables${lips}: "${line.original}"`
+			`Line ${line.id}, speaker ${line.speaker}: ${count} syllables${lips}. Original: "${line.original}"`
 		);
 	}
 	return parts.join('\n');
