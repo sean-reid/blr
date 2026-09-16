@@ -4,6 +4,8 @@ Bad lip reading generator. Drop a video of people talking and get it back with t
 
 The video never leaves your browser. Audio is extracted locally, sent for transcription, and the new audio is mixed and muxed back in on your machine. Vocal separation runs in the browser too.
 
+Share uploads the finished video to a link that plays it with captions and expires after seven days. Nothing is stored unless you share.
+
 Live at [blr.dwainosaur.com](https://blr.dwainosaur.com).
 
 ## Develop
@@ -13,7 +15,7 @@ pnpm install
 pnpm dev
 ```
 
-AI calls are mocked in development and tests. Dev and preview load bindings from `wrangler.dev.jsonc`, which has no AI binding, sets `AI_MODE=mock` and uses Turnstile's test keys so the browser check always passes; the mock answers every transcription with a recorded response for the sample clip. Set `BLR_LIVE=1` to develop against `wrangler.jsonc` and real Workers AI, which costs money. End-to-end tests run in Google Chrome, which Playwright installs on demand.
+AI calls are mocked in development and tests. Dev and preview load bindings from `wrangler.dev.jsonc`, which has no AI binding, sets `AI_MODE=mock` and uses Turnstile's test keys so the browser check always passes; the mock answers every transcription with a recorded response for the sample clip. Set `BLR_LIVE=1` to develop against `wrangler.jsonc` and real Workers AI, which costs money. Shares go to the `blr-share` R2 bucket, which the local proxy emulates on disk, so sharing works offline. End-to-end tests run in Google Chrome, which Playwright installs on demand.
 
 ## Test
 
@@ -30,5 +32,3 @@ pnpm test:e2e
 pnpm build
 pnpm exec wrangler deploy
 ```
-
-Every AI route sits behind an invisible Turnstile challenge, a per-IP rate limit and a daily Workers AI ceiling. Production needs the widget's site key in `wrangler.jsonc` as `TURNSTILE_SITE_KEY`, plus two secrets set with `wrangler secret put`: `TURNSTILE_SECRET` (the widget's secret key) and `TOKEN_SECRET` (any long random string; it signs the session tokens). `DAILY_NEURONS` in `wrangler.jsonc` caps spend per UTC day.
