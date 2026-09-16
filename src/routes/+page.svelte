@@ -13,7 +13,17 @@
 	let current = $derived(
 		pipeline.lines.find((l) => time >= l.start && time < l.end + 0.15)?.id ?? null
 	);
-	let busy = $derived(pipeline.stage === 'reading' || pipeline.stage === 'listening');
+	let views = $derived(
+		Object.fromEntries(
+			pipeline.lines.map((l) => [
+				l.id,
+				{ current: pipeline.current(l.id), busy: pipeline.rewrites[l.id]?.busy ?? false }
+			])
+		)
+	);
+	let busy = $derived(
+		pipeline.stage === 'reading' || pipeline.stage === 'listening' || pipeline.stage === 'rewriting'
+	);
 
 	function take(f: File) {
 		file = f;
@@ -58,7 +68,14 @@
 		{/if}
 
 		{#if pipeline.stage === 'ready'}
-			<Transcript lines={pipeline.lines} {current} onseek={seek} />
+			<Transcript
+				lines={pipeline.lines}
+				rewrites={views}
+				{current}
+				onseek={seek}
+				onreroll={(id) => pipeline.reroll(id)}
+				onedit={(id, text) => pipeline.edit(id, text)}
+			/>
 		{/if}
 
 		<div class="meta mono muted">

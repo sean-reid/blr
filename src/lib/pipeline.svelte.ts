@@ -1,27 +1,43 @@
 import { decodeAudio, encodeWav16, toMono, TRANSCRIBE_RATE } from '$lib/media/audio';
 import { groupLines } from '$lib/transcript/lines';
 import type { Line, Transcript } from '$lib/transcript/types';
+import { loadIndex } from '$lib/viseme/load';
+import type { VisemeIndex } from '$lib/viseme/index';
+import { rewriteAll, rewriteOne, scoreText, type Ranked } from '$lib/rewrite/client';
+import type { Tone } from '$lib/rewrite/types';
 
-export type Stage = 'idle' | 'reading' | 'listening' | 'ready' | 'failed';
+export type Stage = 'idle' | 'reading' | 'listening' | 'rewriting' | 'ready' | 'failed';
 
 export const STAGE_LABEL: Record<Stage, string> = {
 	idle: '',
 	reading: 'Reading.',
 	listening: 'Listening.',
+	rewriting: 'Rewriting.',
 	ready: '',
 	failed: ''
 };
+
+export interface Rewrite {
+	options: Ranked[];
+	pick: number;
+	custom: Ranked | null;
+	busy: boolean;
+}
 
 export class Pipeline {
 	stage = $state<Stage>('idle');
 	error = $state<string | null>(null);
 	transcript = $state<Transcript | null>(null);
 	lines = $state<Line[]>([]);
+	rewrites = $state<Record<string, Rewrite>>({});
+	tone = $state<Tone>('pg13');
+	private index: VisemeIndex | null = null;
 
 	async run(file: File) {
 		this.stage = 'reading';
 		this.error = null;
 		try {
+			const indexReady = loadIndex();
 			const buffer = await decodeAudio(file);
 			const mono = await toMono(buffer, TRANSCRIBE_RATE);
 			const wav = encodeWav16(mono, TRANSCRIBE_RATE);
@@ -39,6 +55,17 @@ export class Pipeline {
 			this.lines = groupLines(this.transcript);
 			if (!this.lines.length)
 				throw new Error('No speech was heard. Try a clip with clearer voices.');
+			this.stage = 'rewriting';
+			this.index = await indexReady;
+			const ranked = await rewriteAll(this.index, this.lines, this.tone);
+			for (const l of this.lines) {
+				this.rewrites[l.id] = {
+					options: ranked.get(l.id) ?? [],
+					pick: 0,
+					custom: null,
+					busy: false
+				};
+			}
 			this.stage = 'ready';
 		} catch (e) {
 			this.error = e instanceof Error ? e.message : String(e);
@@ -46,10 +73,62 @@ export class Pipeline {
 		}
 	}
 
+	current(id: string): Ranked | null {
+		const rw = this.rewrites[id];
+		if (!rw) return null;
+		return rw.custom ?? rw.options[rw.pick] ?? null;
+	}
+
+	text(id: string): string {
+		return this.current(id)?.text ?? '';
+	}
+
+	async reroll(id: string) {
+		const i = this.lines.findIndex((l) => l.id === id);
+		const rw = this.rewrites[id];
+		if (i < 0 || !rw || !this.index) return;
+		if (rw.custom) {
+			this.rewrites[id] = { ...rw, custom: null };
+			return;
+		}
+		if (rw.pick + 1 < rw.options.length) {
+			this.rewrites[id] = { ...rw, pick: rw.pick + 1 };
+			return;
+		}
+		this.rewrites[id] = { ...rw, busy: true };
+		try {
+			const neighbours = [this.lines[i - 1], this.lines[i + 1]]
+				.filter(Boolean)
+				.map((l) => ({ speaker: l.speaker, text: this.text(l.id) }));
+			const fresh = await rewriteOne(this.index, this.lines[i], neighbours, this.tone);
+			const known = rw.options.map((o) => o.text);
+			const options = [...rw.options, ...fresh.filter((o) => !known.includes(o.text))];
+			this.rewrites[id] = {
+				options,
+				pick: Math.min(rw.pick + 1, options.length - 1),
+				custom: null,
+				busy: false
+			};
+		} catch (e) {
+			this.rewrites[id] = { ...rw, busy: false };
+			this.error = e instanceof Error ? e.message : String(e);
+		}
+	}
+
+	edit(id: string, text: string) {
+		const line = this.lines.find((l) => l.id === id);
+		const rw = this.rewrites[id];
+		if (!line || !rw || !this.index) return;
+		const trimmed = text.replace(/\s+/g, ' ').trim();
+		if (!trimmed || trimmed === this.text(id)) return;
+		this.rewrites[id] = { ...rw, custom: scoreText(this.index, line, trimmed) };
+	}
+
 	reset() {
 		this.stage = 'idle';
 		this.error = null;
 		this.transcript = null;
 		this.lines = [];
+		this.rewrites = {};
 	}
 }
