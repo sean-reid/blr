@@ -15,7 +15,8 @@ describe('wav', () => {
 	it('decodes 16-bit PCM', () => {
 		const buffer = new ArrayBuffer(44 + 4);
 		const view = new DataView(buffer);
-		const write = (o: number, s: string) => [...s].forEach((c, i) => view.setUint8(o + i, c.charCodeAt(0)));
+		const write = (o: number, s: string) =>
+			[...s].forEach((c, i) => view.setUint8(o + i, c.charCodeAt(0)));
 		write(0, 'RIFF');
 		view.setUint32(4, 40, true);
 		write(8, 'WAVE');

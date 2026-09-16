@@ -47,7 +47,8 @@ describe('stft', () => {
 		for (let i = 0; i < length; i++) x[i] = Math.sin((2 * Math.PI * freq * i) / 44100);
 		const spec = stft(x, cfg);
 		const t = 30;
-		const mag = (f: number) => Math.hypot(spec.re[f * spec.frames + t], spec.im[f * spec.frames + t]);
+		const mag = (f: number) =>
+			Math.hypot(spec.re[f * spec.frames + t], spec.im[f * spec.frames + t]);
 		expect(mag(bin)).toBeCloseTo(cfg.nFft / 4, 0);
 		expect(mag(bin + 10)).toBeLessThan(1e-3 * mag(bin));
 	});
