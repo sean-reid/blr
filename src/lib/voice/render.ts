@@ -1,11 +1,13 @@
 import { duck, mix, resample, type Clip, type Pcm } from '../audio/mix';
 import { fitRatio, stretch } from '../audio/stretch';
 import type { Line } from '../transcript/types';
+import { warpWords, type Span } from './warp';
 
 export interface Spoken {
 	line: Line;
 	samples: Float32Array;
 	rate: number;
+	words?: Span[];
 }
 
 export function pcmFromBuffer(buffer: AudioBuffer): Pcm {
@@ -18,13 +20,37 @@ export function pcmFromBuffer(buffer: AudioBuffer): Pcm {
 // range, then dropped onto the ducked bed at the line's start time.
 export function renderMix(bed: Pcm, spoken: Spoken[], duckBed = true): Pcm {
 	const spans = spoken.map((s) => ({ start: s.line.start, end: s.line.end }));
-	const clips: Clip[] = spoken.map((s) => {
+	const clips: Clip[] = spoken.flatMap((s) => {
 		const mono = resample(s.samples, s.rate, bed.rate);
+		if (s.words?.length) return wordClips(mono, bed.rate, s);
 		const slot = Math.max(0.2, s.line.end - s.line.start);
 		const ratio = fitRatio(mono.length / bed.rate, slot);
-		return { at: s.line.start, samples: stretch(mono, ratio, bed.rate), gain: 0.9 };
+		return [{ at: s.line.start, samples: stretch(mono, ratio, bed.rate), gain: 0.9 }];
 	});
 	return mix(duckBed ? duck(bed, spans) : bed, clips);
+}
+
+// Each spoken word is stretched toward the span of mouth movement it maps
+// to and dropped exactly there, so pauses in the original stay silent.
+export function wordClips(mono: Float32Array, rate: number, s: Spoken): Clip[] {
+	const words = s.words ?? [];
+	const targets = warpWords(s.line.words, words);
+	return words.map((w, i) => {
+		const piece = mono.slice(Math.round(w.start * rate), Math.round(w.end * rate));
+		const target = targets[i];
+		const ratio = fitRatio(piece.length / rate, target.end - target.start, true);
+		return { at: target.start, samples: fade(stretch(piece, ratio, rate), rate), gain: 0.9 };
+	});
+}
+
+function fade(x: Float32Array, rate: number, ms = 8): Float32Array {
+	const n = Math.min(Math.round((rate * ms) / 1000), Math.floor(x.length / 2));
+	for (let i = 0; i < n; i++) {
+		const g = i / n;
+		x[i] *= g;
+		x[x.length - 1 - i] *= g;
+	}
+	return x;
 }
 
 export function toAudioBuffer(ctx: BaseAudioContext, pcm: Pcm): AudioBuffer {

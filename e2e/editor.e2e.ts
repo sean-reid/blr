@@ -88,10 +88,15 @@ test.describe('editor', () => {
 		page
 	}) => {
 		let speakCalls = 0;
+		const spokenTexts: string[] = [];
 		page.on('request', (r) => {
-			if (r.url().endsWith('/api/speak')) speakCalls++;
+			if (r.url().endsWith('/api/speak')) {
+				speakCalls++;
+				spokenTexts.push(String(r.postDataJSON()?.text ?? ''));
+			}
 		});
 		const row = rows(page).nth(1);
+		const mutedText = (await row.locator('.new').innerText()).trim();
 		await row.hover();
 		await row.getByRole('button', { name: 'Mute line 2' }).click();
 		await expect(row).toHaveClass(/muted/);
@@ -101,7 +106,8 @@ test.describe('editor', () => {
 		);
 		await expect(row.locator('.new')).toHaveCSS('text-decoration-line', 'line-through');
 		await voiced(page);
-		expect(speakCalls).toBe(8);
+		expect(speakCalls).toBeGreaterThanOrEqual(8);
+		expect(spokenTexts).not.toContain(mutedText);
 		await page.getByLabel('Captions').check();
 		await seekToRow(page, 1);
 		await expect(page.locator('.caption')).toHaveCount(0);
