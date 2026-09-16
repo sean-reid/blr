@@ -39,7 +39,11 @@ export function rank(index: VisemeIndex, line: Line, options: string[]): Ranked[
 			);
 			const count = looked.reduce((n, l) => n + l.syllables, 0);
 			const reuse = words.filter((w) => originalSet.has(w)).length;
-			const score = Math.max(0, a.score - 0.04 * Math.abs(count - syllables) - 0.2 * reuse);
+			const wordGap = Math.abs(words.length - originals.length);
+			const score = Math.max(
+				0,
+				a.score - 0.08 * Math.abs(count - syllables) - 0.03 * wordGap - 0.2 * reuse
+			);
 			return { text, score, perWord: a.perWord };
 		})
 		.sort((x, y) => y.score - x.score);

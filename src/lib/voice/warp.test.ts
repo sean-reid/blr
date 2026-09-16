@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { speechClock, speechDuration, warpWords } from './warp';
+import { mapRuns, speechClock, speechDuration, speechRuns, warpWords } from './warp';
 import type { Word } from '../transcript/types';
 
 const w = (start: number, end: number): Word => ({
@@ -46,5 +46,37 @@ describe('warpWords', () => {
 				{ start: 3, end: 3.5 }
 			])
 		).toBe(1.5);
+	});
+});
+
+describe('speechRuns and mapRuns', () => {
+	const words = [w(0, 0.3), w(0.32, 0.6), w(0.65, 1.0), w(1.5, 1.8), w(1.82, 2.2)];
+
+	it('merges words that touch and keeps real pauses', () => {
+		const runs = speechRuns(words);
+		expect(runs).toEqual([
+			{ start: 0, end: 1.0 },
+			{ start: 1.5, end: 2.2 }
+		]);
+	});
+
+	it('cuts the spoken words at the boundary nearest each pause', () => {
+		const spoken = [
+			{ start: 0, end: 0.4 },
+			{ start: 0.42, end: 0.9 },
+			{ start: 0.95, end: 1.2 },
+			{ start: 1.25, end: 1.7 }
+		];
+		const map = mapRuns(words, spoken);
+		expect(map.length).toBe(2);
+		expect(map[0].source).toEqual({ start: 0, end: 0.9 });
+		expect(map[1].source).toEqual({ start: 0.95, end: 1.7 });
+		expect(map[0].target).toEqual({ start: 0, end: 1.0 });
+		expect(map[1].target).toEqual({ start: 1.5, end: 2.2 });
+	});
+
+	it('merges original runs when there are fewer spoken words than runs', () => {
+		const map = mapRuns(words, [{ start: 0, end: 1 }]);
+		expect(map).toEqual([{ source: { start: 0, end: 1 }, target: { start: 0, end: 2.2 } }]);
 	});
 });
