@@ -87,13 +87,9 @@ test.describe('editor', () => {
 	test('a muted line keeps the original audio and is skipped by speech and captions', async ({
 		page
 	}) => {
-		let speakCalls = 0;
 		const spokenTexts: string[] = [];
 		page.on('request', (r) => {
-			if (r.url().endsWith('/api/speak')) {
-				speakCalls++;
-				spokenTexts.push(String(r.postDataJSON()?.text ?? ''));
-			}
+			if (r.url().endsWith('/api/speak')) spokenTexts.push(String(r.postDataJSON()?.text ?? ''));
 		});
 		const row = rows(page).nth(1);
 		const mutedText = (await row.locator('.new').innerText()).trim();
@@ -106,7 +102,6 @@ test.describe('editor', () => {
 		);
 		await expect(row.locator('.new')).toHaveCSS('text-decoration-line', 'line-through');
 		await voiced(page);
-		expect(speakCalls).toBeGreaterThanOrEqual(8);
 		expect(spokenTexts).not.toContain(mutedText);
 		await page.getByLabel('Captions').check();
 		await seekToRow(page, 1);

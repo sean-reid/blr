@@ -13,13 +13,16 @@ test.describe('voicing', () => {
 		const b = await page.getByRole('combobox', { name: 'Voice for speaker B' }).inputValue();
 		expect(a).not.toBe(b);
 		expect(a.length).toBeGreaterThan(0);
+		await expect(page.getByRole('button', { name: 'Voice it' })).toBeEnabled({ timeout: 60_000 });
 		let speakCalls = 0;
 		page.on('request', (r) => {
 			if (r.url().endsWith('/api/speak')) speakCalls++;
 		});
+		const shown = await page.locator('.lines li .new').allInnerTexts();
 		await page.getByRole('button', { name: 'Voice it' }).click();
 		await expect(page.getByRole('button', { name: 'Download' })).toBeVisible({ timeout: 60_000 });
-		expect(speakCalls).toBeGreaterThanOrEqual(9);
+		expect(speakCalls).toBe(0);
+		expect(await page.locator('.lines li .new').allInnerTexts()).toEqual(shown);
 		await expect(page.locator('video')).toHaveAttribute('data-audio', 'new');
 		await page.getByLabel('New audio').uncheck();
 		await expect(page.locator('video')).toHaveAttribute('data-audio', 'original');

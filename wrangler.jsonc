@@ -19,5 +19,5 @@
 		{ "binding": "MODELS", "bucket_name": "blr-models" }
 	],
 	"routes": [{ "pattern": "blr.dwainosaur.com", "custom_domain": true }],
-	"vars": { "AI_MODE": "live", "TURNSTILE_SITE_KEY": "", "DAILY_NEURONS": "9000" }
+	"vars": { "AI_MODE": "live", "TURNSTILE_SITE_KEY": "", "DAILY_NEURONS": "100000" }
 }
