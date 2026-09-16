@@ -12,7 +12,7 @@
 	"ai": { "binding": "AI" },
 	"kv_namespaces": [{ "binding": "BUDGET", "id": "bb0be48a2cf1493fadf36112d6ece9b6" }],
 	"ratelimits": [
-		{ "name": "RATE", "namespace_id": "1001", "simple": { "limit": 40, "period": 60 } }
+		{ "name": "RATE", "namespace_id": "1001", "simple": { "limit": 150, "period": 60 } }
 	],
 	"r2_buckets": [
 		{ "binding": "SHARE", "bucket_name": "blr-share" },
