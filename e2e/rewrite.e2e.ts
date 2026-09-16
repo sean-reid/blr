@@ -9,8 +9,8 @@ test.describe('editor', () => {
 
 	test('every line gets a new reading that differs from the original', async ({ page }) => {
 		const rows = page.locator('.lines li');
-		await expect(rows).toHaveCount(11);
-		for (let i = 0; i < 11; i++) {
+		await expect(rows).toHaveCount(9);
+		for (let i = 0; i < 9; i++) {
 			const row = rows.nth(i);
 			const original = (await row.locator('.original span').last().innerText()).trim();
 			const fresh = (await row.locator('.new').innerText()).trim();

@@ -3,102 +3,101 @@
 		{
 			"id": "l0",
 			"options": [
-				"I'm not allowed to talk to Mark at the bakery",
-				"My mom buys bread on Mondays",
-				"I'm no good at making pancakes",
-				"People are eating muffins in my room",
-				"I need to find a new bike pump",
-				"My brother's dog is pretty big"
+				"I'm not allowed to talk to Brian at the museum",
+				"My brother eats most of the pizza by midnight",
+				"People bump into me on the bus pretty often",
+				"I'm trying to meet Mike at the coffee shop",
+				"Most days I'm busy making bad decisions",
+				"I'm pretty sure I saw a mouse in the kitchen"
 			]
 		},
 		{
 			"id": "l1",
 			"options": [
 				"My cat is mad",
-				"I'm full of beans",
-				"You're not my mom",
-				"I need a nap",
+				"I need a mop",
+				"You owe me cash",
+				"I'm very cold",
 				"This pen is dry",
-				"I hate my socks"
+				"I want soup"
 			]
 		},
 		{
 			"id": "l2",
 			"options": [
-				"Why not buy more gum",
-				"People are boring me",
-				"My feet are getting muddy",
-				"I'm not paying the babysitter",
-				"Buy me a pumpkin pie",
-				"My brother's phone is busted"
+				"Why not buy a map and get more burgers",
+				"People move and get more puppies",
+				"My mom buys and gets more pillows",
+				"I'm not sure I want to meet Bob at the park",
+				"People bump into me and get more bruises",
+				"My brother buys and gets more magazines"
 			]
 		},
 		{
 			"id": "l3",
 			"options": [
-				"And by the way, my fridge is empty",
-				"My boss is pretty mean",
-				"I'm moving to Mexico",
-				"My cat has no name",
-				"People are watching me",
-				"I'm not eating lunch"
+				"And by the way, how are your pants",
+				"And maybe I'll meet you at the beach",
+				"And by the way, I'm eating breakfast",
+				"And I'm pretty sure I'm in big trouble",
+				"And maybe I'll buy a new bike",
+				"And I'm not sure I like your music"
 			]
 		},
 		{
 			"id": "l4",
-			"options": ["No way", "Oh boy", "I'm mad", "Not now", "Oh no", "Bye mom"]
+			"options": [
+				"Oh, I'm mad",
+				"No, I'm done",
+				"Yes, I'm bad",
+				"Oh, I'm sad",
+				"No, I'm glad",
+				"Oh, I'm fed"
+			]
 		},
 		{
 			"id": "l5",
 			"options": [
-				"But money isn't made of paper clips",
-				"My bedroom's full of old bikes",
-				"But people aren't made of metal",
-				"My mom's making me eat pudding",
-				"But my dog's name is Mr. Mike",
-				"My backpack's full of old phones"
+				"But money here isn't like it was back in Denver",
+				"But pizza here isn't like it was back in Boston",
+				"But music here isn't like it was back in Chicago",
+				"But people here aren't like it was back in Dallas",
+				"But school here isn't like it was back in Houston",
+				"But food here isn't like it was back in Seattle"
 			]
 		},
 		{
 			"id": "l6",
-			"options": ["Hey you", "No go", "My guy", "Oh no", "Bye bye", "Hey mom"]
+			"options": [
+				"Well, you know, son, maybe life is like your bike",
+				"Well, you know, son, maybe work is like your phone",
+				"Well, you know, son, maybe home is like your bed",
+				"Well, you know, son, maybe food is like your dog",
+				"Well, you know, son, maybe sleep is like your car",
+				"Well, you know, son, maybe fun is like your book"
+			]
 		},
 		{
 			"id": "l7",
 			"options": [
-				"Know, son, maybe life is like your phone",
-				"My mom knows how to make a cake",
-				"Know, mom, maybe I'm not a kid",
-				"People know how to make me mad",
-				"My brother knows how to play guitar",
-				"I know how to make a mess"
+				"This computer will make my work loud",
+				"This sandwich will fill my belly tight",
+				"This pillow will make my head feel right",
+				"This bike will take me to the store",
+				"This dog will make my life more bright",
+				"This music will make my feet move fast"
 			]
 		},
 		{
 			"id": "l8",
 			"options": [
-				"This pillow will do its job well",
-				"My toaster will make some toast",
-				"This computer will play some games",
-				"My book will tell a story",
-				"This chair will hold my weight",
-				"My dog will chase a ball"
+				"But as you said, you still have to pay",
+				"But as you said, you still have to run",
+				"But as you said, you still have to jump",
+				"But as you said, you still have to hide",
+				"But as you said, you still have to play",
+				"But as you said, you still have to wait"
 			]
-		},
-		{
-			"id": "l9",
-			"options": [
-				"But as you said, my mouth is numb",
-				"My mouth is full of food",
-				"But as you see, my bike is broken",
-				"My face is made of skin",
-				"But as you know, my name is Bob",
-				"My hand is holding a pen"
-			]
-		},
-		{
-			"id": "l10",
-			"options": ["no", "so", "up", "on", "by", "my"]
 		}
 	]
 }
