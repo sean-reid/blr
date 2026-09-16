@@ -11,22 +11,37 @@ const index = new VisemeIndex(data);
 const lines = groupLines(normalizeNova(sample, 25));
 
 describe('lineRequest', () => {
-	it('carries syllables and lip cues for the line', () => {
+	it('carries a per-word syllable pattern and lip cues for the line', () => {
 		const req = lineRequest(index, lines[3]);
 		expect(req.original).toBe('And by the way, how are things going in school?');
-		expect(req.syllables).toBe(11);
+		expect(req.pattern.length).toBeGreaterThanOrEqual(1);
+		expect(req.pattern.every((n) => n >= 1)).toBe(true);
 		expect(req.lips).toEqual([2]);
 	});
 });
 
 describe('rank', () => {
-	it('prefers the option whose mouth shapes and syllables match', () => {
-		const line = lines[4];
-		expect(line.text).toBe('Oh, okay, dad.');
-		const r = rank(index, line, ['No, no way, Nat.', 'The committee has adjourned for lunch.']);
-		expect(r[0].text).toBe('No, no way, Nat.');
-		expect(r[0].score).toBeGreaterThan(r[1].score);
-		expect(r[0].perWord.length).toBe(4);
+	it('prefers a reading that follows the pattern, word for word', () => {
+		const word = (text: string, start: number, end: number) => ({
+			word: text,
+			punctuated: text,
+			start,
+			end,
+			confidence: 1,
+			speaker: 0
+		});
+		const line = {
+			id: 'x',
+			speaker: 0,
+			start: 0,
+			end: 0.45,
+			text: 'bad men',
+			words: [word('bad', 0, 0.2), word('men', 0.2, 0.36)]
+		};
+		const r = rank(index, line, ['The committee has adjourned for lunch.', 'mad ben', 'sad hen']);
+		expect(r[0].fits).toBe(true);
+		expect(r[0].text).toBe('mad ben');
+		expect(r[r.length - 1].fits).toBe(false);
 	});
 
 	it('penalises reusing the original words', () => {

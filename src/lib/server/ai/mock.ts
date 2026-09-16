@@ -20,9 +20,7 @@ export function mockClient(): AiClient {
 			return structuredClone(sample) as NovaResponse;
 		},
 		async chatJson(req) {
-			const heads = [
-				...req.user.matchAll(/^Line (\S+), speaker \d+, \d+ syllables[^:]*: "(.*)"$/gm)
-			];
+			const heads = [...req.user.matchAll(/^Line (\S+), speaker \d+[^"]*: "(.*)"$/gm)];
 			const known = new Map((rewrite as RewriteResponse).lines.map((l) => [l.id, l.options]));
 			return {
 				lines: heads.map(([, id, original]) => ({ id, options: known.get(id) ?? [original] }))

@@ -4,7 +4,7 @@ export interface LineRequest {
 	id: string;
 	speaker: number;
 	original: string;
-	syllables: number;
+	pattern: number[];
 	lips: number[];
 }
 
