@@ -45,5 +45,8 @@
 			"esbuild",
 			"workerd"
 		]
+	},
+	"dependencies": {
+		"onnxruntime-web": "^1.30.0"
 	}
 }

@@ -7,7 +7,7 @@ export default defineConfig({
 	testDir: 'e2e',
 	testMatch: '**/*.e2e.ts',
 	webServer: {
-		command: `pnpm build && pnpm preview --host 127.0.0.1 --port ${port}`,
+		command: `pnpm build && pnpm preview --host 127.0.0.1 --port ${port} --strictPort`,
 		url,
 		reuseExistingServer: !process.env.CI
 	},
