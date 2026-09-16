@@ -1,5 +1,7 @@
 <script lang="ts">
 	import DropZone from '$lib/components/DropZone.svelte';
+	import TrimBar from '$lib/components/TrimBar.svelte';
+	import { initialRange, type Range } from '$lib/media/range';
 	import Player from '$lib/components/Player.svelte';
 	import Progress from '$lib/components/Progress.svelte';
 	import Transcript from '$lib/components/Transcript.svelte';
@@ -60,14 +62,34 @@
 		shared && !pipeline.stale && pipeline.output?.url === shared.output ? shared : null
 	);
 
-	function take(f: File) {
+	let trimming = $state<{ file: File; url: string; duration: number; range: Range } | null>(null);
+	let trimVideo = $state<HTMLVideoElement | null>(null);
+
+	function take(f: File, range: Range | null = null) {
 		file = f;
 		url = URL.createObjectURL(f);
-		pipeline.run(f);
+		pipeline.run(f, range);
+	}
+
+	function trim(f: File, duration: number) {
+		const range = initialRange(duration);
+		if (!range) return take(f);
+		trimming = { file: f, url: URL.createObjectURL(f), duration, range };
+	}
+
+	function useTrimmed() {
+		if (!trimming) return;
+		const { file: f, url: u, range } = trimming;
+		trimming = null;
+		file = f;
+		url = u;
+		pipeline.run(f, range);
 	}
 
 	function reset() {
 		if (url) URL.revokeObjectURL(url);
+		if (trimming) URL.revokeObjectURL(trimming.url);
+		trimming = null;
 		file = null;
 		url = null;
 		time = 0;
@@ -127,7 +149,14 @@
 <section class="stage">
 	{#if file && url}
 		<div class="frame" data-separation={pipeline.separation}>
-			<Player src={url} mixed={pipeline.mixed} {useMixed} bind:video ontime={(t) => (time = t)} />
+			<Player
+				src={url}
+				mixed={pipeline.mixed}
+				{useMixed}
+				range={pipeline.range}
+				bind:video
+				ontime={(t) => (time = t)}
+			/>
 			{#if busy}
 				<Progress {label} {fraction} />
 			{/if}
@@ -210,8 +239,24 @@
 			{/if}
 			<button type="button" onclick={reset}>Remove</button>
 		</div>
+	{:else if trimming}
+		<div class="frame">
+			<Player src={trimming.url} bind:video={trimVideo} />
+		</div>
+		<TrimBar
+			duration={trimming.duration}
+			bind:range={trimming.range}
+			onscrub={(t) => {
+				if (trimVideo) trimVideo.currentTime = t;
+			}}
+			onuse={useTrimmed}
+		/>
+		<div class="meta mono muted">
+			<span>{trimming.file.name}</span>
+			<button type="button" onclick={reset}>Remove</button>
+		</div>
 	{:else}
-		<DropZone onfile={take} />
+		<DropZone onfile={take} ontrim={trim} />
 	{/if}
 	<div class="challenge" bind:this={challenge}></div>
 </section>
