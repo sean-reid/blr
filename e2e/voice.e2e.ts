@@ -13,6 +13,7 @@ test.describe('voicing', () => {
 		const b = await page.getByRole('combobox', { name: 'Voice for speaker B' }).inputValue();
 		expect(a).not.toBe(b);
 		expect(a.length).toBeGreaterThan(0);
+		await expect(page.getByRole('button', { name: 'Voice it' })).toBeEnabled({ timeout: 60_000 });
 		let speakCalls = 0;
 		page.on('request', (r) => {
 			if (r.url().endsWith('/api/speak')) speakCalls++;
