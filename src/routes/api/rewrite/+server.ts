@@ -1,6 +1,8 @@
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { aiClient } from '$lib/server/ai';
+import { NEURONS } from '$lib/server/budget';
+import { guard } from '$lib/server/guard';
 import { responseSchema, SYSTEM, userMessage, validate } from '$lib/rewrite/prompt';
 import type { RewriteRequest } from '$lib/rewrite/types';
 
@@ -35,8 +37,10 @@ function check(body: unknown): RewriteRequest {
 	};
 }
 
-export const POST: RequestHandler = async ({ request, platform }) => {
+export const POST: RequestHandler = async (event) => {
+	const { request, platform } = event;
 	const req = check(await request.json().catch(() => error(400, 'Bad JSON.')));
+	await guard(event, NEURONS.rewrite);
 	const syllables = req.lines.reduce((n, l) => n + l.syllables, 0);
 	const raw = await aiClient(platform).chatJson({
 		system: SYSTEM,

@@ -5,9 +5,16 @@
 	import Transcript from '$lib/components/Transcript.svelte';
 	import VoicePicker from '$lib/components/VoicePicker.svelte';
 	import { Pipeline, STAGE_LABEL } from '$lib/pipeline.svelte';
+	import { Session } from '$lib/session';
 	import { speakersOf } from '$lib/transcript/lines';
 
-	const pipeline = new Pipeline();
+	let { data } = $props();
+	let challenge = $state<HTMLDivElement | null>(null);
+	const session = new Session(
+		() => data.siteKey,
+		() => challenge
+	);
+	const pipeline = new Pipeline(session.fetch);
 	let file = $state<File | null>(null);
 	let url = $state<string | null>(null);
 	let video = $state<HTMLVideoElement | null>(null);
@@ -129,6 +136,7 @@
 	{:else}
 		<DropZone onfile={take} />
 	{/if}
+	<div class="challenge" bind:this={challenge}></div>
 </section>
 
 <style>
@@ -144,6 +152,10 @@
 	.error {
 		color: var(--accent);
 		font-size: 0.9375rem;
+	}
+
+	.challenge:empty {
+		display: none;
 	}
 
 	.actions {
