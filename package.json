@@ -13,7 +13,8 @@
 		"format": "prettier --write .",
 		"test:unit": "vitest",
 		"test:e2e": "playwright test",
-		"test": "pnpm test:unit --run && pnpm test:e2e",
+		"test:scripts": "node --test scripts/*.test.mjs",
+		"test": "pnpm test:unit --run && pnpm test:scripts && pnpm test:e2e",
 		"deploy": "pnpm build && wrangler deploy",
 		"build:visemes": "node scripts/build-visemes.ts",
 		"dev:live": "BLR_LIVE=1 vite dev"
