@@ -1,4 +1,4 @@
-import type { NovaResponse } from '$lib/server/ai/types';
+import type { NovaResponse } from '../server/ai/types';
 import type { Transcript, Word } from './types';
 
 export function normalizeNova(res: NovaResponse, duration: number): Transcript {

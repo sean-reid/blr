@@ -22,7 +22,13 @@ export interface ChatRequest {
 	temperature: number;
 }
 
+export interface Speech {
+	body: ReadableStream<Uint8Array> | ArrayBuffer;
+	contentType: string;
+}
+
 export interface AiClient {
 	transcribe(audio: ReadableStream<Uint8Array>, contentType: string): Promise<NovaResponse>;
 	chatJson(req: ChatRequest): Promise<unknown>;
+	speak(text: string, voice: string): Promise<Speech>;
 }

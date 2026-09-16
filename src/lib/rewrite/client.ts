@@ -1,7 +1,7 @@
-import { normalizeWord, type VisemeIndex } from '$lib/viseme/index';
-import { alignWords } from '$lib/viseme/align';
-import { syllableCues } from '$lib/viseme/cues';
-import type { Line } from '$lib/transcript/types';
+import { normalizeWord, type VisemeIndex } from '../viseme/index';
+import { alignWords } from '../viseme/align';
+import { syllableCues } from '../viseme/cues';
+import type { Line } from '../transcript/types';
 import type { LineRequest, RewriteRequest, RewriteResponse, Tone } from './types';
 
 export const LEVEL = 'loose';

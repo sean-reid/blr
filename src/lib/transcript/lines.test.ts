@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { groupLines, speakersOf } from './lines';
 import { normalizeNova } from './normalize';
-import sample from '$lib/server/fixtures/nova-sample.json';
+import sample from '../server/fixtures/nova-sample.json';
 
 const transcript = normalizeNova(sample, 25);
 

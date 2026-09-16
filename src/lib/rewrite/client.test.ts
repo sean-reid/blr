@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { lineRequest, rank, rewriteAll } from './client';
-import { VisemeIndex } from '$lib/viseme/index';
-import data from '$lib/viseme/data/words.json';
-import { groupLines } from '$lib/transcript/lines';
-import { normalizeNova } from '$lib/transcript/normalize';
-import sample from '$lib/server/fixtures/nova-sample.json';
+import { VisemeIndex } from '../viseme/index';
+import data from '../viseme/data/words.json';
+import { groupLines } from '../transcript/lines';
+import { normalizeNova } from '../transcript/normalize';
+import sample from '../server/fixtures/nova-sample.json';
 import type { RewriteRequest } from './types';
 
 const index = new VisemeIndex(data);

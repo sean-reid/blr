@@ -5,8 +5,13 @@ import { loadIndex } from '$lib/viseme/load';
 import type { VisemeIndex } from '$lib/viseme/index';
 import { rewriteAll, rewriteOne, scoreText, type Ranked } from '$lib/rewrite/client';
 import type { Tone } from '$lib/rewrite/types';
+import { decodeSpeech, speak } from '$lib/voice/client';
+import { pcmFromBuffer, renderMix, type Spoken } from '$lib/voice/render';
+import { defaultVoice } from '$lib/voice/voices';
+import type { Pcm } from '$lib/audio/mix';
 
-export type Stage = 'idle' | 'reading' | 'listening' | 'rewriting' | 'ready' | 'failed';
+export type Stage =
+	'idle' | 'reading' | 'listening' | 'rewriting' | 'ready' | 'voicing' | 'mixing' | 'failed';
 
 export const STAGE_LABEL: Record<Stage, string> = {
 	idle: '',
@@ -14,6 +19,8 @@ export const STAGE_LABEL: Record<Stage, string> = {
 	listening: 'Listening.',
 	rewriting: 'Rewriting.',
 	ready: '',
+	voicing: 'Voicing.',
+	mixing: 'Mixing.',
 	failed: ''
 };
 
@@ -31,7 +38,11 @@ export class Pipeline {
 	lines = $state<Line[]>([]);
 	rewrites = $state<Record<string, Rewrite>>({});
 	tone = $state<Tone>('pg13');
+	voices = $state<Record<number, string>>({});
+	mixed = $state<Pcm | null>(null);
+	stale = $state(false);
 	private index: VisemeIndex | null = null;
+	private bed: Pcm | null = null;
 
 	async run(file: File) {
 		this.stage = 'reading';
@@ -39,6 +50,7 @@ export class Pipeline {
 		try {
 			const indexReady = loadIndex();
 			const buffer = await decodeAudio(file);
+			this.bed = pcmFromBuffer(buffer);
 			const mono = await toMono(buffer, TRANSCRIBE_RATE);
 			const wav = encodeWav16(mono, TRANSCRIBE_RATE);
 			this.stage = 'listening';
@@ -55,6 +67,7 @@ export class Pipeline {
 			this.lines = groupLines(this.transcript);
 			if (!this.lines.length)
 				throw new Error('No speech was heard. Try a clip with clearer voices.');
+			for (const l of this.lines) this.voices[l.speaker] ??= defaultVoice(l.speaker);
 			this.stage = 'rewriting';
 			this.index = await indexReady;
 			const ranked = await rewriteAll(this.index, this.lines, this.tone);
@@ -87,6 +100,7 @@ export class Pipeline {
 		const i = this.lines.findIndex((l) => l.id === id);
 		const rw = this.rewrites[id];
 		if (i < 0 || !rw || !this.index) return;
+		this.stale = !!this.mixed;
 		if (rw.custom) {
 			this.rewrites[id] = { ...rw, custom: null };
 			return;
@@ -122,6 +136,37 @@ export class Pipeline {
 		const trimmed = text.replace(/\s+/g, ' ').trim();
 		if (!trimmed || trimmed === this.text(id)) return;
 		this.rewrites[id] = { ...rw, custom: scoreText(this.index, line, trimmed) };
+		this.stale = !!this.mixed;
+	}
+
+	setVoice(speaker: number, voice: string) {
+		if (this.voices[speaker] === voice) return;
+		this.voices[speaker] = voice;
+		this.stale = !!this.mixed;
+	}
+
+	async voice() {
+		if (!this.bed || this.stage !== 'ready') return;
+		this.stage = 'voicing';
+		this.error = null;
+		try {
+			const spoken: Spoken[] = [];
+			for (const line of this.lines) {
+				const text = this.text(line.id);
+				if (!text) continue;
+				const bytes = await speak(text, this.voices[line.speaker] ?? defaultVoice(line.speaker));
+				const samples = await decodeSpeech(bytes);
+				spoken.push({ line, samples, rate: samples.rate });
+			}
+			this.stage = 'mixing';
+			await new Promise((r) => setTimeout(r));
+			this.mixed = renderMix(this.bed, spoken);
+			this.stale = false;
+		} catch (e) {
+			this.error = e instanceof Error ? e.message : String(e);
+		} finally {
+			this.stage = 'ready';
+		}
 	}
 
 	reset() {
@@ -130,5 +175,9 @@ export class Pipeline {
 		this.transcript = null;
 		this.lines = [];
 		this.rewrites = {};
+		this.voices = {};
+		this.mixed = null;
+		this.stale = false;
+		this.bed = null;
 	}
 }
