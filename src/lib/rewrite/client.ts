@@ -1,11 +1,13 @@
 import { normalizeWord, type VisemeIndex } from '../viseme/index';
 import { alignWords } from '../viseme/align';
 import { syllableCues } from '../viseme/cues';
+import { speechDuration } from '../voice/warp';
 import type { Line } from '../transcript/types';
 import type { LineRequest, RewriteRequest, RewriteResponse, Tone } from './types';
 
 export const LEVEL = 'loose';
 export const OPTIONS = 6;
+export const DEFAULT_PACE = 4.8;
 const BATCH = 10;
 
 export interface Ranked {
@@ -24,11 +26,19 @@ export function tokens(text: string): string[] {
 	return text.split(/\s+/).map(normalizeWord).filter(Boolean);
 }
 
-export function rank(index: VisemeIndex, line: Line, options: string[]): Ranked[] {
+// pace is the synthesiser's syllables per second, so a reading's predicted
+// spoken length can be held against the time the mouth actually moves.
+export function rank(
+	index: VisemeIndex,
+	line: Line,
+	options: string[],
+	pace = DEFAULT_PACE
+): Ranked[] {
 	const originals = line.words.map((w) => normalizeWord(w.word));
 	const target = originals.flatMap((w) => index.lookup(w, LEVEL).visemes);
 	const syllables = originals.reduce((n, w) => n + index.lookup(w, LEVEL).syllables, 0);
 	const originalSet = new Set(originals.filter((w) => w.length > 3));
+	const mouthTime = speechDuration(line.words);
 	return options
 		.map((text) => {
 			const words = tokens(text);
@@ -40,10 +50,10 @@ export function rank(index: VisemeIndex, line: Line, options: string[]): Ranked[
 			const count = looked.reduce((n, l) => n + l.syllables, 0);
 			const reuse = words.filter((w) => originalSet.has(w)).length;
 			const wordGap = Math.abs(words.length - originals.length);
-			const score = Math.max(
-				0,
-				a.score - 0.08 * Math.abs(count - syllables) - 0.03 * wordGap - 0.2 * reuse
-			);
+			const drift =
+				mouthTime > 0 ? Math.abs(Math.log(Math.max(0.05, count / pace) / mouthTime)) : 0;
+			const shape = mouthTime > 0 ? 0.35 * drift : 0.08 * Math.abs(count - syllables);
+			const score = Math.max(0, a.score - shape - 0.03 * wordGap - 0.2 * reuse);
 			return { text, score, perWord: a.perWord };
 		})
 		.sort((x, y) => y.score - x.score);
@@ -57,7 +67,8 @@ export async function rewriteAll(
 	index: VisemeIndex,
 	lines: Line[],
 	tone: Tone,
-	fetcher: typeof fetch = fetch
+	fetcher: typeof fetch = fetch,
+	pace = DEFAULT_PACE
 ): Promise<Map<string, Ranked[]>> {
 	const out = new Map<string, Ranked[]>();
 	for (let i = 0; i < lines.length; i += BATCH) {
@@ -78,7 +89,7 @@ export async function rewriteAll(
 		);
 		for (const l of batch) {
 			const options = res.lines.find((r) => r.id === l.id)?.options ?? [];
-			out.set(l.id, rank(index, l, options));
+			out.set(l.id, rank(index, l, options, pace));
 		}
 	}
 	return out;
@@ -89,7 +100,8 @@ export async function rewriteOne(
 	line: Line,
 	neighbours: { speaker: number; text: string }[],
 	tone: Tone,
-	fetcher: typeof fetch = fetch
+	fetcher: typeof fetch = fetch,
+	pace = DEFAULT_PACE
 ): Promise<Ranked[]> {
 	const res = await post(
 		{
@@ -101,7 +113,7 @@ export async function rewriteOne(
 		},
 		fetcher
 	);
-	return rank(index, line, res.lines[0]?.options ?? []);
+	return rank(index, line, res.lines[0]?.options ?? [], pace);
 }
 
 function speakerCount(lines: Line[]): number {
