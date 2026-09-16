@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.2.0](https://github.com/sean-reid/blr/compare/blr-v0.1.0...blr-v0.2.0) (2026-09-16)
+
+
+### Features
+
+* **voice:** fit readings to the mouth by measurement, not by counting ([#43](https://github.com/sean-reid/blr/issues/43)) ([a5fc3a3](https://github.com/sean-reid/blr/commit/a5fc3a34b7df17cbc2713edd981e3c340477b1a9))
+* **voice:** write readings to the syllable count the mouth allows ([#42](https://github.com/sean-reid/blr/issues/42)) ([e808f60](https://github.com/sean-reid/blr/commit/e808f60e33a99898c2cf9c2474bf3da3bb35c021))
+
+
+### Bug Fixes
+
+* **server:** ride out KV write bursts and Workers AI hiccups ([#40](https://github.com/sean-reid/blr/issues/40)) ([75c55d9](https://github.com/sean-reid/blr/commit/75c55d986b5a6cae0f6eaf1888c70f981d3f63ec))
+* **voice:** fit readings before they are shown, so Voice it speaks the text on screen ([#44](https://github.com/sean-reid/blr/issues/44)) ([f4e5374](https://github.com/sean-reid/blr/commit/f4e5374328f69ba5cd1afe41180aa92ba920b3f2))
+
 ## [0.1.0](https://github.com/sean-reid/blr/compare/blr-v0.0.1...blr-v0.1.0) (2026-09-16)
 
 
