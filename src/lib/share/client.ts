@@ -49,11 +49,12 @@ function once(video: HTMLVideoElement, event: string, message: string): Promise<
 	});
 }
 
-export function uploadShare(
+export async function uploadShare(
 	video: Blob,
 	poster: Blob,
 	lines: ShareLine[],
-	onProgress: (fraction: number) => void
+	onProgress: (fraction: number) => void,
+	bearer: (fresh?: boolean) => Promise<string>
 ): Promise<ShareResult> {
 	const form = new FormData();
 	form.append('video', video, 'video.mp4');
@@ -63,19 +64,29 @@ export function uploadShare(
 		new Blob([JSON.stringify(lines)], { type: 'application/json' }),
 		'transcript.json'
 	);
+	let res = await send(form, await bearer(), onProgress);
+	if (res.status === 401) res = await send(form, await bearer(true), onProgress);
+	const body = res.body as { message?: string } | ShareResult | null;
+	if (res.status >= 200 && res.status < 300 && body && 'id' in body) return body;
+	throw new Error((body as { message?: string } | null)?.message ?? res.statusText);
+}
+
+function send(
+	form: FormData,
+	authorization: string,
+	onProgress: (fraction: number) => void
+): Promise<{ status: number; statusText: string; body: unknown }> {
 	return new Promise((resolve, reject) => {
 		const xhr = new XMLHttpRequest();
 		xhr.open('PUT', '/api/share');
+		xhr.setRequestHeader('authorization', authorization);
 		xhr.responseType = 'json';
 		xhr.upload.onprogress = (e) => {
 			if (e.lengthComputable) onProgress(e.loaded / e.total);
 		};
 		xhr.onerror = () => reject(new Error('The upload failed.'));
-		xhr.onload = () => {
-			const body = xhr.response as { message?: string } | ShareResult | null;
-			if (xhr.status >= 200 && xhr.status < 300 && body && 'id' in body) resolve(body);
-			else reject(new Error((body as { message?: string } | null)?.message ?? xhr.statusText));
-		};
+		xhr.onload = () =>
+			resolve({ status: xhr.status, statusText: xhr.statusText, body: xhr.response });
 		xhr.send(form);
 	});
 }

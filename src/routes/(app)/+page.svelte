@@ -95,7 +95,13 @@
 				posterFrame(url, pipeline.lines[0]?.start ?? 0)
 			]);
 			const lines = toShareLines(pipeline.lines, (id) => pipeline.text(id));
-			const result = await uploadShare(blob, poster, lines, (f) => (sharing = f));
+			const result = await uploadShare(
+				blob,
+				poster,
+				lines,
+				(f) => (sharing = f),
+				(fresh) => session.bearer(fresh)
+			);
 			shared = { ...result, output: out.url };
 		} catch (e) {
 			pipeline.error = e instanceof Error ? e.message : String(e);

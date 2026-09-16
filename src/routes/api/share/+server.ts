@@ -3,6 +3,7 @@ import type { RequestHandler } from './$types';
 import { expiresAt } from '$lib/share/expiry';
 import { newId } from '$lib/share/id';
 import type { ShareResult } from '$lib/share/types';
+import { rateLimit, requireToken } from '$lib/server/guard';
 import { parseLines, shareBucket } from '$lib/server/share';
 
 const MAX_VIDEO = 200 * 1024 * 1024;
@@ -11,6 +12,8 @@ const MAX_TRANSCRIPT = 256 * 1024;
 
 export const PUT: RequestHandler = async ({ request, platform, url }) => {
 	const bucket = shareBucket(platform);
+	await rateLimit(request, platform?.env.RATE);
+	await requireToken(request, platform?.env.TOKEN_SECRET);
 	const type = request.headers.get('content-type')?.split(';')[0].trim() ?? '';
 	if (type !== 'multipart/form-data') error(415, 'Send the share as multipart form data.');
 	const length = Number(request.headers.get('content-length') ?? 0);
