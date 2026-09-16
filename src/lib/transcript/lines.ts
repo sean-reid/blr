@@ -107,3 +107,7 @@ function toLine(words: Word[], i: number): Line {
 export function speakersOf(lines: Line[]): number[] {
 	return [...new Set(lines.map((l) => l.speaker))].sort((a, b) => a - b);
 }
+
+export function audible(lines: Line[], muted: Record<string, boolean>): Line[] {
+	return lines.filter((l) => !muted[l.id]);
+}
