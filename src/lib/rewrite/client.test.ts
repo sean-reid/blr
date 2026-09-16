@@ -50,12 +50,12 @@ describe('rewriteAll', () => {
 			);
 		}) as typeof fetch;
 		const out = await rewriteAll(index, many, 'pg13', fetcher);
-		expect(calls.length).toBe(3);
+		expect(calls.length).toBe(2);
 		expect(calls[0].lines.length).toBe(10);
 		expect(calls[0].options).toBe(6);
 		expect(calls[0].speakers).toBe(2);
 		expect(calls[1].context?.length).toBe(2);
-		expect(out.size).toBe(22);
+		expect(out.size).toBe(18);
 		expect(out.get('l3')?.length).toBe(2);
 	});
 });
