@@ -24,6 +24,16 @@ export function liveClient(ai: Ai): AiClient {
 			})) as { response?: unknown };
 			const r = out.response;
 			return typeof r === 'string' ? JSON.parse(r) : r;
+		},
+		async speak(text, voice) {
+			const body = (await ai.run('@cf/deepgram/aura-1', {
+				text,
+				speaker: voice as Ai_Cf_Deepgram_Aura_1_Input['speaker'],
+				encoding: 'linear16',
+				container: 'wav',
+				sample_rate: 24000
+			})) as unknown as ReadableStream<Uint8Array>;
+			return { body, contentType: 'audio/wav' };
 		}
 	};
 }
