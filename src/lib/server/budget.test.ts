@@ -48,3 +48,15 @@ describe('charge', () => {
 		expect(store.get(dayKey(NOW))?.ttl).toBe((2 * DAY) / 1000);
 	});
 });
+
+describe('charge under a KV write burst', () => {
+	it('still allows the request when the write is rate limited', async () => {
+		const kv = {
+			get: async () => '100',
+			put: async () => {
+				throw new Error('KV PUT failed: 429 Too Many Requests');
+			}
+		};
+		await expect(charge(kv, 10, 9000, Date.parse('2026-09-16T12:00:00Z'))).resolves.toBe(true);
+	});
+});

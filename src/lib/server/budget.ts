@@ -27,6 +27,12 @@ export async function charge(
 	const key = dayKey(now);
 	const used = Number(await kv.get(key)) || 0;
 	if (used + neurons > limit) return false;
-	await kv.put(key, String(used + neurons), { expirationTtl: KEEP_SECONDS });
+	try {
+		await kv.put(key, String(used + neurons), { expirationTtl: KEEP_SECONDS });
+	} catch (e) {
+		// KV takes one write a second per key; a lost estimate under a burst is
+		// cheaper than a failed render.
+		console.warn('budget write skipped:', e instanceof Error ? e.message : e);
+	}
 	return true;
 }
