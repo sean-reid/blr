@@ -29,8 +29,12 @@ export function mockClient(): AiClient {
 			};
 		},
 		async speak(text, voice) {
-			const b64 = (speech as Record<string, string>)[`${voice}|${text}`];
-			if (b64) return { body: decode(b64), contentType: 'audio/mpeg' };
+			const table = speech as Record<string, string>;
+			const key =
+				`${voice}|${text}` in table
+					? `${voice}|${text}`
+					: Object.keys(table).find((k) => k.slice(k.indexOf('|') + 1) === text);
+			if (key) return { body: decode(table[key]), contentType: 'audio/mpeg' };
 			return { body: placeholderSpeech(text), contentType: 'audio/wav' };
 		}
 	};

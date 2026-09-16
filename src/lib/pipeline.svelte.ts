@@ -8,8 +8,18 @@ import type { Tone } from '$lib/rewrite/types';
 import { decodeSpeech, speak } from '$lib/voice/client';
 import { pcmFromBuffer, renderMix, type Spoken } from '$lib/voice/render';
 import { defaultVoice } from '$lib/voice/voices';
-import type { Pcm } from '$lib/audio/mix';
+import { resample, type Pcm } from '$lib/audio/mix';
 import { outputName, remux } from '$lib/media/remux';
+import {
+	MODEL_BYTES,
+	MODEL_SHA256,
+	MODEL_URL,
+	runtimeUrl,
+	sha256Hex
+} from '$lib/audio/separate/config';
+import { SAMPLE_RATE, type Stereo } from '$lib/audio/separate/mdx';
+import { VocalSeparator } from '$lib/audio/separate/separate';
+import { pickVoices, speakerPitches } from '$lib/voice/pitch';
 
 export type Stage =
 	| 'idle'
@@ -17,10 +27,13 @@ export type Stage =
 	| 'listening'
 	| 'rewriting'
 	| 'ready'
+	| 'separating'
 	| 'voicing'
 	| 'mixing'
 	| 'exporting'
 	| 'failed';
+
+export type Separation = 'pending' | 'ready' | 'unavailable';
 
 export const STAGE_LABEL: Record<Stage, string> = {
 	idle: '',
@@ -28,6 +41,7 @@ export const STAGE_LABEL: Record<Stage, string> = {
 	listening: 'Listening.',
 	rewriting: 'Rewriting.',
 	ready: '',
+	separating: 'Separating.',
 	voicing: 'Voicing.',
 	mixing: 'Mixing.',
 	exporting: 'Exporting.',
@@ -53,7 +67,10 @@ export class Pipeline {
 	stale = $state(false);
 	output = $state<{ url: string; name: string } | null>(null);
 	progress = $state(0);
+	separation = $state<Separation>('pending');
+	download = $state<{ loaded: number; total: number } | null>(null);
 	private file: File | null = null;
+	private stems: Promise<Pcm | null> | null = null;
 	private index: VisemeIndex | null = null;
 	private bed: Pcm | null = null;
 
@@ -67,6 +84,7 @@ export class Pipeline {
 			const indexReady = loadIndex();
 			const buffer = await decodeAudio(file);
 			this.bed = pcmFromBuffer(buffer);
+			this.stems = this.separate(this.bed);
 			const mono = await toMono(buffer, TRANSCRIBE_RATE);
 			const wav = encodeWav16(mono, TRANSCRIBE_RATE);
 			this.stage = 'listening';
@@ -83,7 +101,9 @@ export class Pipeline {
 			this.lines = groupLines(this.transcript);
 			if (!this.lines.length)
 				throw new Error('No speech was heard. Try a clip with clearer voices.');
-			for (const l of this.lines) this.voices[l.speaker] ??= defaultVoice(l.speaker);
+			const picked = pickVoices(speakerPitches(mono, TRANSCRIBE_RATE, this.lines));
+			for (const l of this.lines)
+				this.voices[l.speaker] ??= picked[l.speaker] ?? defaultVoice(l.speaker);
 			this.stage = 'rewriting';
 			this.index = await indexReady;
 			const ranked = await rewriteAll(this.index, this.lines, this.tone, this.fetcher);
@@ -181,9 +201,22 @@ export class Pipeline {
 				const samples = await decodeSpeech(bytes);
 				spoken.push({ line, samples, rate: samples.rate });
 			}
+			let bed = this.bed;
+			let duckBed = true;
+			if (this.separation === 'pending' && this.stems) {
+				this.stage = 'separating';
+				const stems = await this.stems;
+				if (stems) {
+					bed = stems;
+					duckBed = false;
+				}
+			} else if (this.separation === 'ready' && this.stems) {
+				bed = (await this.stems) ?? bed;
+				duckBed = bed === this.bed;
+			}
 			this.stage = 'mixing';
 			await new Promise((r) => setTimeout(r));
-			this.mixed = renderMix(this.bed, spoken);
+			this.mixed = renderMix(bed, spoken, duckBed);
 			this.stale = false;
 			this.dropOutput();
 		} catch (e) {
@@ -210,6 +243,54 @@ export class Pipeline {
 		}
 	}
 
+	// Runs in the background from the moment the audio is decoded; failure of
+	// any kind falls back to ducking the original under the new lines.
+	private async separate(bed: Pcm): Promise<Pcm | null> {
+		this.separation = 'pending';
+		this.progress = 0;
+		try {
+			const res = await fetch(MODEL_URL);
+			if (!res.ok || !res.body) throw new Error(`model ${res.status}`);
+			const total = Number(res.headers.get('content-length')) || MODEL_BYTES;
+			const parts: Uint8Array[] = [];
+			let loaded = 0;
+			const reader = res.body.getReader();
+			for (;;) {
+				const { done, value } = await reader.read();
+				if (done) break;
+				parts.push(value);
+				loaded += value.byteLength;
+				this.download = { loaded, total };
+			}
+			const bytes = new Uint8Array(loaded);
+			let offset = 0;
+			for (const part of parts) {
+				bytes.set(part, offset);
+				offset += part.byteLength;
+			}
+			this.download = null;
+			if ((await sha256Hex(bytes.buffer)) !== MODEL_SHA256) throw new Error('model hash mismatch');
+			const separator = await VocalSeparator.load(bytes.buffer, { runtimeUrl: runtimeUrl() });
+			try {
+				const left = resample(bed.channels[0], bed.rate, SAMPLE_RATE);
+				const right = resample(bed.channels[1] ?? bed.channels[0], bed.rate, SAMPLE_RATE);
+				const mix: Stereo = [left, right];
+				const stems = await separator.separate(mix, {
+					onProgress: (done, count) => (this.progress = done / count)
+				});
+				const channels = stems.instrumental.map((ch) => resample(ch, SAMPLE_RATE, bed.rate));
+				this.separation = 'ready';
+				return { rate: bed.rate, channels: channels.slice(0, bed.channels.length) };
+			} finally {
+				separator.dispose();
+			}
+		} catch (e) {
+			console.info('separation unavailable:', e instanceof Error ? e.message : e);
+			this.separation = 'unavailable';
+			return null;
+		}
+	}
+
 	private dropOutput() {
 		if (this.output) URL.revokeObjectURL(this.output.url);
 		this.output = null;
@@ -227,5 +308,8 @@ export class Pipeline {
 		this.mixed = null;
 		this.stale = false;
 		this.bed = null;
+		this.stems = null;
+		this.separation = 'pending';
+		this.download = null;
 	}
 }

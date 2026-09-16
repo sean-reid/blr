@@ -16,7 +16,7 @@ export function pcmFromBuffer(buffer: AudioBuffer): Pcm {
 
 // Each spoken line is stretched toward its slot, within the speech-safe
 // range, then dropped onto the ducked bed at the line's start time.
-export function renderMix(bed: Pcm, spoken: Spoken[]): Pcm {
+export function renderMix(bed: Pcm, spoken: Spoken[], duckBed = true): Pcm {
 	const spans = spoken.map((s) => ({ start: s.line.start, end: s.line.end }));
 	const clips: Clip[] = spoken.map((s) => {
 		const mono = resample(s.samples, s.rate, bed.rate);
@@ -24,7 +24,7 @@ export function renderMix(bed: Pcm, spoken: Spoken[]): Pcm {
 		const ratio = fitRatio(mono.length / bed.rate, slot);
 		return { at: s.line.start, samples: stretch(mono, ratio, bed.rate), gain: 0.9 };
 	});
-	return mix(duck(bed, spans), clips);
+	return mix(duckBed ? duck(bed, spans) : bed, clips);
 }
 
 export function toAudioBuffer(ctx: BaseAudioContext, pcm: Pcm): AudioBuffer {
