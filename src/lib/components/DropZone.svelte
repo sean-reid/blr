@@ -7,6 +7,20 @@
 	let input: HTMLInputElement;
 	let over = $state(false);
 	let error = $state<string | null>(null);
+	let fetching = $state(false);
+
+	async function sample() {
+		fetching = true;
+		try {
+			const res = await fetch('/sample.mp4');
+			if (!res.ok) throw new Error();
+			take(new File([await res.blob()], 'sample.mp4', { type: 'video/mp4' }));
+		} catch {
+			error = 'The sample could not be loaded.';
+		} finally {
+			fetching = false;
+		}
+	}
 
 	function isVideo(file: File) {
 		return /^video\//.test(file.type) || /\.(mp4|mov|webm)$/i.test(file.name);
@@ -59,6 +73,10 @@
 	{/if}
 </div>
 
+<p class="sample">
+	<button type="button" onclick={sample} disabled={fetching}>or try a sample</button>
+</p>
+
 <input
 	bind:this={input}
 	type="file"
@@ -110,6 +128,22 @@
 		margin-top: 8px;
 		color: var(--accent);
 		font-size: 0.875rem;
+	}
+
+	.sample {
+		margin-top: 4px;
+		font-size: 0.875rem;
+	}
+
+	.sample button {
+		min-height: var(--tap);
+		color: var(--ink-muted);
+		text-decoration: underline;
+		text-underline-offset: 0.16em;
+	}
+
+	.sample button:hover {
+		color: var(--ink);
 	}
 
 	@media (min-width: 768px) {

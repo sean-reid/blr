@@ -13,7 +13,7 @@ pnpm install
 pnpm dev
 ```
 
-AI calls are mocked in development unless `AI_MODE=live` is set. See `wrangler.jsonc` for the bindings a live deploy needs.
+AI calls are mocked in development and tests: `.dev.vars` sets `AI_MODE=mock`, and the mock answers every transcription with a recorded response for the sample clip. Production sets `AI_MODE=live` in `wrangler.jsonc`. End-to-end tests run in Google Chrome, which Playwright installs on demand.
 
 ## Test
 
