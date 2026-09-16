@@ -2,6 +2,7 @@
 	import { theme, toggleTheme } from '$lib/theme.svelte';
 	import About from '$lib/components/About.svelte';
 	import { resolve } from '$app/paths';
+	import { updated } from '$app/state';
 
 	let { children } = $props();
 	let aboutOpen = $state(false);
@@ -37,6 +38,13 @@
 
 {#if aboutOpen}
 	<About id="about" onclose={() => (aboutOpen = false)} />
+{/if}
+
+{#if updated.current}
+	<p class="updated" role="status">
+		BLR was updated.
+		<button type="button" class="plain" onclick={() => location.reload()}>Reload</button>
+	</p>
 {/if}
 
 <main>
@@ -87,6 +95,17 @@
 	.plain:hover,
 	.plain[aria-expanded='true'] {
 		color: var(--ink);
+	}
+
+	.updated {
+		width: 100%;
+		max-width: calc(var(--measure) + 2 * var(--gutter));
+		margin: 0 auto;
+		padding-inline: var(--gutter);
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		font-size: 0.9375rem;
 	}
 
 	main {
