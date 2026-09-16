@@ -8,7 +8,7 @@ export const MODEL = process.env.BLR_MODEL ?? '/tmp/blr-models/Kim_Vocal_2.onnx'
 export const CLIP = process.env.BLR_CLIP ?? '/tmp/blr-clips/shy-demo.wav';
 export const CLIP_SECONDS = 25;
 
-/** Where speech happens in the demo clip, and the near-silent gap used as the reference. */
+/** Where speech happens in the demo clip, and the quiet gap (mix near -50 dB) used as the reference. */
 export const SPEECH: Span[] = [
 	[0.4, 2.4],
 	[3.1, 8.7],
@@ -16,7 +16,7 @@ export const SPEECH: Span[] = [
 	[13.9, 20.4],
 	[21.0, 23.7]
 ];
-export const GAP: Span = [2.4, 3.1];
+export const GAP: Span = [8.7, 9.5];
 
 const RUNTIME_FILES: Record<string, string> = {
 	'ort-wasm-simd-threaded.jsep.wasm': 'application/wasm',
