@@ -2,9 +2,7 @@ import * as ort from 'onnxruntime-web';
 import type { ModelRunner } from './mdx.ts';
 import type { Provider } from './protocol.ts';
 
-export const RUNTIME_WASM = 'ort-wasm-simd-threaded.jsep.wasm';
-
-/** Where the onnxruntime .wasm binary is fetched from when no runtime URL is given. */
+/** Where the onnxruntime .wasm binary and its loader are fetched from when no runtime URL is given. */
 export function defaultRuntimeUrl(): string {
 	return `https://cdn.jsdelivr.net/npm/onnxruntime-web@${ort.env.versions.web}/dist/`;
 }
@@ -21,7 +19,7 @@ export async function createSession(
 	dims: readonly number[],
 	runtimeUrl = defaultRuntimeUrl()
 ): Promise<ModelSession> {
-	ort.env.wasm.wasmPaths = { wasm: new URL(RUNTIME_WASM, runtimeUrl).href };
+	ort.env.wasm.wasmPaths = runtimeUrl;
 	const bytes = new Uint8Array(model);
 	const errors: string[] = [];
 	for (const provider of providers) {

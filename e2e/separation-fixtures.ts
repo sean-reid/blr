@@ -18,9 +18,10 @@ export const SPEECH: Span[] = [
 ];
 export const GAP: Span = [2.4, 3.1];
 
-const RUNTIME_WASM = fileURLToPath(
-	import.meta.resolve('onnxruntime-web/ort-wasm-simd-threaded.jsep.wasm')
-);
+const RUNTIME_FILES: Record<string, string> = {
+	'ort-wasm-simd-threaded.jsep.wasm': 'application/wasm',
+	'ort-wasm-simd-threaded.jsep.mjs': 'text/javascript'
+};
 
 export function fixturesPresent() {
 	return existsSync(MODEL) && existsSync(CLIP);
@@ -55,9 +56,10 @@ export async function serveModel(page: Page) {
 	await page.route('**/models/Kim_Vocal_2.onnx', (route) =>
 		route.fulfill({ path: MODEL, contentType: 'application/octet-stream' })
 	);
-	await page.route('**/ort-wasm-simd-threaded.jsep.wasm', (route) =>
-		route.fulfill({ path: RUNTIME_WASM, contentType: 'application/wasm' })
-	);
+	for (const [file, contentType] of Object.entries(RUNTIME_FILES)) {
+		const path = fileURLToPath(import.meta.resolve(`onnxruntime-web/${file}`));
+		await page.route(`**/${file}`, (route) => route.fulfill({ path, contentType }));
+	}
 }
 
 /** Drives the dev page through one separation and returns when it reports done or an error. */
