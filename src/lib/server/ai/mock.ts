@@ -21,9 +21,20 @@ export function mockClient(): AiClient {
 		},
 		async chatJson(req) {
 			const heads = [...req.user.matchAll(/^Line (\S+), speaker \d+[^"]*: "(.*)"$/gm)];
+			const revisions = [
+				...req.user.matchAll(
+					/^Line (\S+), speaker \d+: the reading "(.*)" was spoken and came out (\d+) syllables short/gm
+				)
+			];
 			const known = new Map((rewrite as RewriteResponse).lines.map((l) => [l.id, l.options]));
 			return {
-				lines: heads.map(([, id, original]) => ({ id, options: known.get(id) ?? [original] }))
+				lines: [
+					...heads.map(([, id, original]) => ({ id, options: known.get(id) ?? [original] })),
+					...revisions.map(([, id, text, add]) => ({
+						id,
+						options: [`${text} and ${'more '.repeat(Number(add)).trim()}`]
+					}))
+				]
 			};
 		},
 		async speak(text, voice) {

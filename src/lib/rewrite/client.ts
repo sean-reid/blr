@@ -2,7 +2,7 @@ import { normalizeWord, type VisemeIndex } from '../viseme/index';
 import { alignWords } from '../viseme/align';
 import { totalSyllables, wordPlan } from '../voice/plan';
 import type { Line } from '../transcript/types';
-import type { LineRequest, RewriteRequest, RewriteResponse, Tone } from './types';
+import type { LineRequest, Revision, RewriteRequest, RewriteResponse, Tone } from './types';
 
 export const LEVEL = 'loose';
 export const OPTIONS = 6;
@@ -110,6 +110,63 @@ export async function rewriteOne(
 		fetcher
 	);
 	return rank(index, line, res.lines[0]?.options ?? [], pace);
+}
+
+// Asks for longer versions of readings that were spoken and came out short
+// of the mouth movement by a measured number of syllables.
+export async function extendLines(
+	index: VisemeIndex,
+	items: { line: Line; text: string; add: number }[],
+	tone: Tone,
+	fetcher: typeof fetch = fetch,
+	pace = DEFAULT_PACE,
+	others: { speaker: number; text: string }[] = []
+): Promise<Map<string, Ranked[]>> {
+	const out = new Map<string, Ranked[]>();
+	for (let i = 0; i < items.length; i += BATCH) {
+		const batch = items.slice(i, i + BATCH);
+		const revisions: Revision[] = batch.map((b) => ({
+			id: b.line.id,
+			speaker: b.line.speaker,
+			text: b.text,
+			add: b.add
+		}));
+		const res = await post(
+			{
+				speakers: speakerCount(batch.map((b) => b.line)),
+				lines: [],
+				revisions,
+				tone,
+				options: 3,
+				context: others.slice(0, 4)
+			},
+			fetcher
+		);
+		for (const b of batch) {
+			const options = res.lines.find((r) => r.id === b.line.id)?.options ?? [];
+			out.set(b.line.id, rank(index, b.line, options, pace));
+		}
+	}
+	return out;
+}
+
+const CLAUSE_BREAK = /,\s+|\s+(?:and|but|because|so|or)\s+/g;
+
+// Drops trailing clauses from a reading that ran long until it is within a
+// syllable of the wanted count; null when no cut lands close enough.
+export function trimToCount(index: VisemeIndex, text: string, wanted: number): string | null {
+	const cuts = [...text.matchAll(CLAUSE_BREAK)].map((m) => m.index ?? 0).filter((i) => i > 0);
+	let best: { text: string; off: number } | null = null;
+	for (const at of cuts) {
+		const head = text
+			.slice(0, at)
+			.trim()
+			.replace(/[,;:]+$/, '');
+		const count = tokens(head).reduce((n, w) => n + index.lookup(w, LEVEL).syllables, 0);
+		const off = Math.abs(count - wanted);
+		if (count >= wanted - 1 && (!best || off < best.off)) best = { text: head, off };
+	}
+	return best && best.off <= 2 ? best.text : null;
 }
 
 function speakerCount(lines: Line[]): number {

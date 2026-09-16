@@ -34,6 +34,11 @@ export function userMessage(req: RewriteRequest): string {
 		parts.push('Already written, for continuity:');
 		for (const c of req.context) parts.push(`  speaker ${c.speaker}: ${c.text}`);
 	}
+	for (const r of req.revisions ?? []) {
+		parts.push(
+			`Line ${r.id}, speaker ${r.speaker}: the reading "${r.text}" was spoken and came out ${r.add} syllables short of the mouth movement. Write ${req.options} versions that keep its sense and opening words and run exactly ${r.add} syllables longer. Add a real second thought, a name, a place or a detail; never tack on words like "again", "daily", "outside", "somehow" or another adverb, and do not borrow a subject already used by another line. Give the whole line each time.`
+		);
+	}
 	for (const line of req.lines) {
 		const total = line.pattern.reduce((a, b) => a + b, 0);
 		const count = line.pattern.length > 1 ? `${line.pattern.join(' + ')} = ${total}` : `${total}`;
@@ -56,7 +61,10 @@ export function responseSchema(req: RewriteRequest) {
 				items: {
 					type: 'object',
 					properties: {
-						id: { type: 'string', enum: req.lines.map((l) => l.id) },
+						id: {
+							type: 'string',
+							enum: [...req.lines.map((l) => l.id), ...(req.revisions ?? []).map((r) => r.id)]
+						},
 						options: { type: 'array', items: { type: 'string' } }
 					},
 					required: ['id', 'options']
@@ -78,5 +86,6 @@ export function validate(req: RewriteRequest, raw: unknown): RewriteResponse {
 			.filter((o) => o.length > 0 && o.length < 200);
 		byId.set(l.id, [...new Set(clean)]);
 	}
-	return { lines: req.lines.map((line) => ({ id: line.id, options: byId.get(line.id) ?? [] })) };
+	const ids = [...req.lines.map((l) => l.id), ...(req.revisions ?? []).map((r) => r.id)];
+	return { lines: ids.map((id) => ({ id, options: byId.get(id) ?? [] })) };
 }

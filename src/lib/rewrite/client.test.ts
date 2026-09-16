@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { lineRequest, rank, rewriteAll } from './client';
+import { lineRequest, rank, rewriteAll, trimToCount } from './client';
 import { VisemeIndex } from '../viseme/index';
 import data from '../viseme/data/words.json';
 import { groupLines } from '../transcript/lines';
@@ -72,5 +72,17 @@ describe('rewriteAll', () => {
 		expect(calls[1].context?.length).toBe(2);
 		expect(out.size).toBe(18);
 		expect(out.get('l3')?.length).toBe(2);
+	});
+});
+
+describe('trimToCount', () => {
+	it('cuts a long reading at a clause break near the wanted count', () => {
+		const text = 'My sister has a pet lobster, and it knows my name, but it never says it';
+		expect(trimToCount(index, text, 8)).toBe('My sister has a pet lobster');
+		expect(trimToCount(index, text, 13)).toBe('My sister has a pet lobster, and it knows my name');
+	});
+
+	it('returns null when no cut lands close enough', () => {
+		expect(trimToCount(index, 'Not my dog', 2)).toBeNull();
 	});
 });

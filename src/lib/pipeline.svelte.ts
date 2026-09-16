@@ -4,7 +4,15 @@ import type { Names } from '$lib/transcript/names';
 import type { Line, Transcript } from '$lib/transcript/types';
 import { loadIndex } from '$lib/viseme/load';
 import type { VisemeIndex } from '$lib/viseme/index';
-import { rewriteAll, rewriteOne, scoreText, type Ranked } from '$lib/rewrite/client';
+import {
+	extendLines,
+	rewriteAll,
+	rewriteOne,
+	scoreText,
+	trimToCount,
+	type Ranked
+} from '$lib/rewrite/client';
+import { totalSyllables, wordPlan } from '$lib/voice/plan';
 import type { Tone } from '$lib/rewrite/types';
 import { decodeSpeech, speak } from '$lib/voice/client';
 import { alignSpeech } from '$lib/voice/align';
@@ -45,6 +53,9 @@ export type Stage =
 export type Separation = 'pending' | 'ready' | 'unavailable';
 
 const VOICE_CONCURRENCY = 3;
+const FIT_ROUNDS = 2;
+const FIT_LOW = 0.85;
+const FIT_HIGH = 1.15;
 
 export const STAGE_LABEL: Record<Stage, string> = {
 	idle: '',
@@ -274,7 +285,12 @@ export class Pipeline {
 				}
 			};
 			await Promise.all(Array.from({ length: VOICE_CONCURRENCY }, worker));
-			const spoken = results.filter((r): r is Spoken => r !== null);
+			let spoken = results.filter((r): r is Spoken => r !== null);
+			for (let round = 0; round < FIT_ROUNDS; round++) {
+				const refit = await this.refit(spoken);
+				if (!refit) break;
+				spoken = refit;
+			}
 			let bed = this.bed;
 			let duckBed = true;
 			if (this.separation === 'pending' && this.stems) {
@@ -375,6 +391,66 @@ export class Pipeline {
 			this.separation = 'unavailable';
 			return null;
 		}
+	}
+
+	// Measures each spoken line against its mouth movement. Short readings are
+	// sent back to be extended by the measured deficit, long ones lose their
+	// trailing clause, and the changed lines are spoken again. Returns null
+	// when every line already fits.
+	private async refit(spoken: Spoken[]): Promise<Spoken[] | null> {
+		if (!this.index) return null;
+		const index = this.index;
+		const pace = this.pace.rate;
+		const shorts: { line: Line; text: string; add: number }[] = [];
+		const changed: Record<string, string> = {};
+		for (const s of spoken) {
+			const rw = this.rewrites[s.line.id];
+			if (!rw || rw.custom) continue;
+			const mouth = speechDuration(s.line.words);
+			const said = speechDuration(s.words ?? []) || s.samples.length / s.rate;
+			if (mouth <= 0 || said <= 0) continue;
+			const ratio = said / mouth;
+			const text = this.text(s.line.id);
+			if (ratio < FIT_LOW) {
+				shorts.push({ line: s.line, text, add: Math.max(1, Math.round((mouth - said) * pace)) });
+			} else if (ratio > FIT_HIGH) {
+				const wanted = totalSyllables(wordPlan(index, s.line, pace).pattern);
+				const cut = trimToCount(index, text, wanted);
+				if (cut) changed[s.line.id] = cut;
+			}
+		}
+		if (shorts.length) {
+			const shortIds = shorts.map((s) => s.line.id);
+			const others = spoken
+				.filter((s) => !shortIds.includes(s.line.id))
+				.map((s) => ({ speaker: s.line.speaker, text: this.text(s.line.id) }));
+			const longer = await extendLines(index, shorts, this.tone, this.fetcher, pace, others);
+			for (const s of shorts) {
+				const best = longer.get(s.line.id)?.[0];
+				if (best) changed[s.line.id] = best.text;
+			}
+		}
+		if (!Object.keys(changed).length) return null;
+		for (const [id, text] of Object.entries(changed)) {
+			const rw = this.rewrites[id];
+			const option = scoreText(
+				index,
+				this.lines.find((l) => l.id === id)!,
+				text
+			);
+			this.rewrites[id] = { ...rw, options: [option, ...rw.options], pick: 0 };
+		}
+		const out: Spoken[] = [];
+		for (const s of spoken) {
+			if (!(s.line.id in changed)) {
+				out.push(s);
+				continue;
+			}
+			const voice = this.voices[s.line.speaker] ?? defaultVoice(s.line.speaker);
+			const again = await this.speakFitting(s.line, voice);
+			out.push(again ?? s);
+		}
+		return out;
 	}
 
 	// Speaks exactly the reading on screen, once per distinct text and voice.

@@ -12,8 +12,15 @@ const MAX_TEXT = 400;
 
 function check(body: unknown): RewriteRequest {
 	const b = body as Partial<RewriteRequest>;
-	if (!Array.isArray(b.lines) || !b.lines.length) error(400, 'No lines.');
-	if (b.lines.length > MAX_LINES) error(400, `At most ${MAX_LINES} lines per request.`);
+	const revisions = Array.isArray(b.revisions) ? b.revisions : [];
+	if (!Array.isArray(b.lines) || (!b.lines.length && !revisions.length)) error(400, 'No lines.');
+	if (b.lines.length + revisions.length > MAX_LINES)
+		error(400, `At most ${MAX_LINES} lines per request.`);
+	for (const r of revisions) {
+		if (typeof r.id !== 'string' || typeof r.text !== 'string' || r.text.length > MAX_TEXT)
+			error(400, 'Bad revision.');
+		if (!Number.isInteger(r.add) || r.add < 1 || r.add > 40) error(400, 'Bad revision.');
+	}
 	for (const l of b.lines) {
 		if (typeof l.id !== 'string' || typeof l.original !== 'string') error(400, 'Bad line.');
 		if (l.original.length > MAX_TEXT) error(400, 'Line too long.');
@@ -35,6 +42,12 @@ function check(body: unknown): RewriteRequest {
 			pattern: l.pattern,
 			lips: l.lips.map(Number).filter((n) => Number.isInteger(n) && n > 0)
 		})),
+		revisions: revisions.map((r) => ({
+			id: r.id,
+			speaker: Number(r.speaker) || 0,
+			text: r.text,
+			add: r.add
+		})),
 		speakers: Math.min(8, Math.max(1, Number(b.speakers) || 1)),
 		tone: b.tone === 'clean' ? 'clean' : 'pg13',
 		options,
@@ -46,12 +59,15 @@ export const POST: RequestHandler = async (event) => {
 	const { request, platform } = event;
 	const req = check(await request.json().catch(() => error(400, 'Bad JSON.')));
 	await guard(event, NEURONS.rewrite);
-	const syllables = req.lines.reduce((n, l) => n + l.pattern.reduce((a, b) => a + b, 0), 0);
+	const syllables =
+		req.lines.reduce((n, l) => n + l.pattern.reduce((a, b) => a + b, 0), 0) +
+		(req.revisions ?? []).reduce((n, r) => n + r.add + 12, 0);
+	const count = req.lines.length + (req.revisions?.length ?? 0);
 	const raw = await aiClient(platform).chatJson({
 		system: SYSTEM,
 		user: userMessage(req),
 		schema: responseSchema(req),
-		maxTokens: 80 + req.lines.length * 12 + syllables * req.options * 3,
+		maxTokens: 80 + count * 12 + syllables * req.options * 3,
 		temperature: 0.9
 	});
 	return json(validate(req, raw));
