@@ -14,7 +14,8 @@
 		"test:unit": "vitest",
 		"test:e2e": "playwright test",
 		"test": "pnpm test:unit --run && pnpm test:e2e",
-		"deploy": "pnpm build && wrangler deploy"
+		"deploy": "pnpm build && wrangler deploy",
+		"build:visemes": "node scripts/build-visemes.ts"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
