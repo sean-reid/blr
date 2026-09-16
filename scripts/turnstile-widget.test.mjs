@@ -51,6 +51,25 @@ test('rotates the secret of an existing widget', async () => {
 	assert.equal(rotate.init.headers.authorization, 'Bearer tok');
 });
 
+test('keeps the stored secret when a rotation is already pending', async () => {
+	const { fetch } = fakeFetch([
+		listing([{ sitekey: 'sk_blr', name: 'blr' }]),
+		{
+			method: 'POST',
+			match: (u) => u === `${BASE}/sk_blr/rotate_secret`,
+			respond: () => ({
+				status: 400,
+				body: {
+					success: false,
+					errors: [{ message: 'A secret rotation is already in progress for this widget' }]
+				}
+			})
+		}
+	]);
+	const widget = await ensureWidget({ fetch, ...args });
+	assert.deepEqual(widget, { sitekey: 'sk_blr', secret: null, created: false });
+});
+
 test('creates the widget when none has the name', async () => {
 	const { fetch, calls } = fakeFetch([
 		listing([{ sitekey: 'other', name: 'something-else' }]),

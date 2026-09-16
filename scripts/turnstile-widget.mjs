@@ -49,13 +49,24 @@ export async function ensureWidget({ fetch, token, accountId, name, domain }) {
 		});
 		return { sitekey: result.sitekey, secret: result.secret, created: true };
 	}
-	const { result } = await call(
-		fetch,
-		token,
-		`/accounts/${accountId}/challenges/widgets/${found.sitekey}/rotate_secret`,
-		{ method: 'POST', body: JSON.stringify({ invalidate_immediately: false }) }
-	);
-	return { sitekey: result.sitekey, secret: result.secret, created: false };
+	try {
+		const { result } = await call(
+			fetch,
+			token,
+			`/accounts/${accountId}/challenges/widgets/${found.sitekey}/rotate_secret`,
+			{ method: 'POST', body: JSON.stringify({ invalidate_immediately: false }) }
+		);
+		return { sitekey: result.sitekey, secret: result.secret, created: false };
+	} catch (err) {
+		// A graceful rotation is allowed once per grace window; the stored secret stays valid.
+		if (
+			/rotation/i.test(String(err.message)) &&
+			/progress|already|pending/i.test(String(err.message))
+		) {
+			return { sitekey: found.sitekey, secret: null, created: false };
+		}
+		throw err;
+	}
 }
 
 function required(key) {
@@ -75,9 +86,11 @@ if (process.argv[1] === new URL(import.meta.url).pathname) {
 	const out = process.env.GITHUB_OUTPUT;
 	if (out) {
 		console.log(`::add-mask::${widget.sitekey}`);
-		console.log(`::add-mask::${widget.secret}`);
-		appendFileSync(out, `sitekey=${widget.sitekey}\nsecret=${widget.secret}\n`);
-		console.log(`Turnstile widget ${widget.created ? 'created' : 'found'}; secret rotated.`);
+		if (widget.secret) console.log(`::add-mask::${widget.secret}`);
+		appendFileSync(out, `sitekey=${widget.sitekey}\nsecret=${widget.secret ?? ''}\n`);
+		console.log(
+			`Turnstile widget ${widget.created ? 'created' : 'found'}; ${widget.secret ? 'secret rotated.' : 'rotation pending, secret kept.'}`
+		);
 	} else {
 		console.log(JSON.stringify(widget, null, 2));
 	}
