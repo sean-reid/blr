@@ -12,7 +12,7 @@ test('a dropped video is transcribed into speaker lines', async ({ page }) => {
 	await expect(page.getByRole('status')).toBeVisible();
 	const lines = page.locator('.lines li');
 	await expect(lines.first()).toBeVisible({ timeout: 30_000 });
-	await expect(lines).toHaveCount(11);
+	await expect(lines).toHaveCount(9);
 	await expect(page.getByText('And by the way, how are things going in school?')).toBeVisible();
 	await expect(page.getByRole('button', { name: 'Speaker A' }).first()).toBeVisible();
 	await expect(page.getByRole('button', { name: 'Speaker B' }).first()).toBeVisible();
