@@ -9,7 +9,7 @@ import type { Tone } from '$lib/rewrite/types';
 import { decodeSpeech, speak } from '$lib/voice/client';
 import { pcmFromBuffer, renderMix, type Spoken } from '$lib/voice/render';
 import { defaultVoice } from '$lib/voice/voices';
-import { resample, type Pcm } from '$lib/audio/mix';
+import { resample, restore, type Pcm } from '$lib/audio/mix';
 import { outputName } from '$lib/media/names';
 import type { Range } from '$lib/media/range';
 import {
@@ -250,6 +250,10 @@ export class Pipeline {
 			} else if (this.separation === 'ready' && this.stems) {
 				bed = (await this.stems) ?? bed;
 				duckBed = bed === this.bed;
+			}
+			if (bed !== this.bed) {
+				const kept = this.lines.filter((l) => this.muted[l.id]);
+				bed = restore(bed, this.bed, kept);
 			}
 			this.stage = 'mixing';
 			await new Promise((r) => setTimeout(r));

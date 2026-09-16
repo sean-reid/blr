@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { duck, mix, resample, rms, type Pcm } from './mix';
+import { duck, mix, resample, restore, rms, type Pcm } from './mix';
 
 const RATE = 1000;
 
@@ -23,6 +23,19 @@ describe('duck', () => {
 		expect(inside / before).toBeCloseTo(0.12, 2);
 		expect(rms(out.channels[0], 2500, 3500)).toBeCloseTo(rms(bed.channels[0], 2500, 3500), 5);
 		expect(out.channels[0][1000 - 30]).not.toBe(bed.channels[0][1000 - 30]);
+	});
+});
+
+describe('restore', () => {
+	it('brings the original back inside the spans and leaves the rest alone', () => {
+		const silent: Pcm = { rate: RATE, channels: [new Float32Array(4 * RATE)] };
+		const out = restore(silent, bed, [{ start: 1, end: 2 }]);
+		expect(out.channels[0].slice(1200, 1800)).toEqual(bed.channels[0].slice(1200, 1800));
+		expect(rms(out.channels[0], 2500, 3500)).toBe(0);
+		const edge = out.channels[0][1000 - 30];
+		expect(Math.abs(edge)).toBeGreaterThan(0);
+		expect(Math.abs(edge)).toBeLessThan(Math.abs(bed.channels[0][1000 - 30]));
+		expect(restore(silent, bed, [])).toBe(silent);
 	});
 });
 
