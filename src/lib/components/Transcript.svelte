@@ -28,9 +28,7 @@
 	}
 
 	function shade(score: number) {
-		if (score >= 0.99) return 'exact';
-		if (score >= 0.66) return 'near';
-		return 'far';
+		return score < 0.34 ? 'far' : 'fit';
 	}
 
 	function commit(id: string, e: Event) {
@@ -56,7 +54,9 @@
 					<span class="time mono muted">{fmt(line.start)}</span>
 					<span class="muted">{line.text}</span>
 				</button>
-				{#if rw?.current}
+				{#if rw && !rw.current}
+					<p class="empty muted">Nothing yet.</p>
+				{:else if rw?.current}
 					{#if editing === line.id}
 						<!-- svelte-ignore a11y_autofocus -->
 						<input
@@ -84,7 +84,7 @@
 									class="w {shade(sc[j] ?? 0)}"
 									title={sc[j] !== undefined && sc[j] < 0.99
 										? `Mouth match ${Math.round((sc[j] ?? 0) * 100)}%`
-										: undefined}>{w}</span
+										: undefined}>{w + ' '}</span
 								>
 							{/each}
 						</button>
@@ -96,6 +96,7 @@
 				class="reroll mono"
 				aria-label="Reroll line {i + 1}"
 				disabled={!rw || rw.busy}
+				class:muted={!rw?.current}
 				onclick={() => onreroll?.(line.id)}
 			>
 				{rw?.busy ? '…' : 'Reroll'}
@@ -162,9 +163,7 @@
 	}
 
 	.new {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0 0.3em;
+		display: block;
 		text-align: left;
 		font-size: 1.0625rem;
 		line-height: 1.4;
@@ -183,14 +182,15 @@
 		text-decoration-color: var(--ink-faint);
 	}
 
-	.w.near {
-		text-decoration: underline dotted var(--ink-faint);
-		text-underline-offset: 0.18em;
-	}
-
 	.w.far {
 		text-decoration: underline dotted var(--accent);
 		text-underline-offset: 0.18em;
+	}
+
+	.empty {
+		font-size: 1.0625rem;
+		line-height: 1.4;
+		padding: 2px 0;
 	}
 
 	.edit {

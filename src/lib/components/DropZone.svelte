@@ -133,6 +133,7 @@
 	.sample {
 		margin-top: 4px;
 		font-size: 0.875rem;
+		text-align: center;
 	}
 
 	.sample button {
