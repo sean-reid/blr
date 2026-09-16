@@ -4,6 +4,8 @@
 	let { onfile }: { onfile: (file: File) => void } = $props();
 
 	const accept = 'video/mp4,video/quicktime,video/webm,.mp4,.mov,.webm';
+	const MAX_BYTES = 500 * 1024 * 1024;
+	const MAX_SECONDS = 3 * 60;
 	let input: HTMLInputElement;
 	let over = $state(false);
 	let error = $state<string | null>(null);
@@ -26,10 +28,34 @@
 		return /^video\//.test(file.type) || /\.(mp4|mov|webm)$/i.test(file.name);
 	}
 
-	function take(file: File | undefined | null) {
+	function duration(file: File): Promise<number> {
+		return new Promise((resolve) => {
+			const video = document.createElement('video');
+			const url = URL.createObjectURL(file);
+			const done = (seconds: number) => {
+				URL.revokeObjectURL(url);
+				video.removeAttribute('src');
+				resolve(Number.isFinite(seconds) ? seconds : 0);
+			};
+			video.preload = 'metadata';
+			video.onloadedmetadata = () => done(video.duration);
+			video.onerror = () => done(0);
+			video.src = url;
+		});
+	}
+
+	async function take(file: File | undefined | null) {
 		if (!file) return;
 		if (!isVideo(file)) {
 			error = 'That is not a video file.';
+			return;
+		}
+		if (file.size > MAX_BYTES) {
+			error = 'That file is over 500 MB. Use a smaller one.';
+			return;
+		}
+		if ((await duration(file)) > MAX_SECONDS) {
+			error = 'That video runs over 3 minutes. Trim it first.';
 			return;
 		}
 		error = null;

@@ -10,6 +10,10 @@
 	},
 	"observability": { "enabled": true },
 	"ai": { "binding": "AI" },
+	"kv_namespaces": [{ "binding": "BUDGET", "id": "bb0be48a2cf1493fadf36112d6ece9b6" }],
+	"ratelimits": [
+		{ "name": "RATE", "namespace_id": "1001", "simple": { "limit": 40, "period": 60 } }
+	],
 	"routes": [{ "pattern": "blr.dwainosaur.com", "custom_domain": true }],
-	"vars": { "AI_MODE": "live" }
+	"vars": { "AI_MODE": "live", "TURNSTILE_SITE_KEY": "", "DAILY_NEURONS": "9000" }
 }

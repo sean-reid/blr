@@ -3,5 +3,12 @@
 	"name": "blr",
 	"compatibility_date": "2026-09-01",
 	"compatibility_flags": ["nodejs_als"],
-	"vars": { "AI_MODE": "mock" }
+	"kv_namespaces": [{ "binding": "BUDGET", "id": "bb0be48a2cf1493fadf36112d6ece9b6" }],
+	"vars": {
+		"AI_MODE": "mock",
+		"TURNSTILE_SITE_KEY": "1x00000000000000000000AA",
+		"TURNSTILE_SECRET": "1x0000000000000000000000000000000AA",
+		"TOKEN_SECRET": "dev-only",
+		"DAILY_NEURONS": "1000000"
+	}
 }

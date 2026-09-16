@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { bearer } from './session';
 
 test.describe('voicing', () => {
 	test.beforeEach(async ({ page }) => {
@@ -37,10 +38,15 @@ test.describe('voicing', () => {
 test('the speak route validates its input and answers audio', async ({ request }) => {
 	const bad = await request.post('/api/speak', { data: { text: 'hi', voice: 'nobody' } });
 	expect(bad.status()).toBe(400);
-	const ok = await request.post('/api/speak', { data: { text: 'My cat is mad', voice: 'orion' } });
+	const headers = await bearer(request);
+	const ok = await request.post('/api/speak', {
+		headers,
+		data: { text: 'My cat is mad', voice: 'orion' }
+	});
 	expect(ok.status()).toBe(200);
 	expect(ok.headers()['content-type']).toBe('audio/mpeg');
 	const fallback = await request.post('/api/speak', {
+		headers,
 		data: { text: 'Never recorded', voice: 'orion' }
 	});
 	expect(fallback.headers()['content-type']).toBe('audio/wav');

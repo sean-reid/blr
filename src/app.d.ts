@@ -5,6 +5,11 @@ declare global {
 			ctx: ExecutionContext;
 		}
 	}
+
+	interface Env {
+		TURNSTILE_SECRET?: string;
+		TOKEN_SECRET?: string;
+	}
 }
 
 export {};

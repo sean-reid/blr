@@ -57,6 +57,8 @@ export class Pipeline {
 	private index: VisemeIndex | null = null;
 	private bed: Pcm | null = null;
 
+	constructor(private fetcher: typeof fetch = fetch) {}
+
 	async run(file: File) {
 		this.file = file;
 		this.stage = 'reading';
@@ -68,7 +70,7 @@ export class Pipeline {
 			const mono = await toMono(buffer, TRANSCRIBE_RATE);
 			const wav = encodeWav16(mono, TRANSCRIBE_RATE);
 			this.stage = 'listening';
-			const res = await fetch(`/api/transcribe?duration=${buffer.duration.toFixed(3)}`, {
+			const res = await this.fetcher(`/api/transcribe?duration=${buffer.duration.toFixed(3)}`, {
 				method: 'POST',
 				headers: { 'content-type': 'audio/wav' },
 				body: wav
@@ -84,7 +86,7 @@ export class Pipeline {
 			for (const l of this.lines) this.voices[l.speaker] ??= defaultVoice(l.speaker);
 			this.stage = 'rewriting';
 			this.index = await indexReady;
-			const ranked = await rewriteAll(this.index, this.lines, this.tone);
+			const ranked = await rewriteAll(this.index, this.lines, this.tone, this.fetcher);
 			for (const l of this.lines) {
 				this.rewrites[l.id] = {
 					options: ranked.get(l.id) ?? [],
@@ -128,7 +130,13 @@ export class Pipeline {
 			const neighbours = [this.lines[i - 1], this.lines[i + 1]]
 				.filter(Boolean)
 				.map((l) => ({ speaker: l.speaker, text: this.text(l.id) }));
-			const fresh = await rewriteOne(this.index, this.lines[i], neighbours, this.tone);
+			const fresh = await rewriteOne(
+				this.index,
+				this.lines[i],
+				neighbours,
+				this.tone,
+				this.fetcher
+			);
 			const known = rw.options.map((o) => o.text);
 			const options = [...rw.options, ...fresh.filter((o) => !known.includes(o.text))];
 			this.rewrites[id] = {
@@ -168,7 +176,8 @@ export class Pipeline {
 			for (const line of this.lines) {
 				const text = this.text(line.id);
 				if (!text) continue;
-				const bytes = await speak(text, this.voices[line.speaker] ?? defaultVoice(line.speaker));
+				const voice = this.voices[line.speaker] ?? defaultVoice(line.speaker);
+				const bytes = await speak(text, voice, this.fetcher);
 				const samples = await decodeSpeech(bytes);
 				spoken.push({ line, samples, rate: samples.rate });
 			}
