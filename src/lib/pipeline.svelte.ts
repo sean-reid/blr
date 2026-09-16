@@ -43,6 +43,7 @@ export type Stage =
 	| 'reading'
 	| 'listening'
 	| 'rewriting'
+	| 'fitting'
 	| 'ready'
 	| 'separating'
 	| 'voicing'
@@ -62,6 +63,7 @@ export const STAGE_LABEL: Record<Stage, string> = {
 	reading: 'Reading.',
 	listening: 'Listening.',
 	rewriting: 'Rewriting.',
+	fitting: 'Fitting.',
 	ready: '',
 	separating: 'Separating.',
 	voicing: 'Voicing.',
@@ -138,6 +140,8 @@ export class Pipeline {
 			this.index = await indexReady;
 			this.fill(await rewriteAll(this.index, this.lines, this.tone, this.fetcher, this.pace.rate));
 			await this.repairMisfits();
+			this.stage = 'fitting';
+			await this.fitAll();
 			this.stage = 'ready';
 		} catch (e) {
 			this.error = e instanceof Error ? e.message : String(e);
@@ -193,12 +197,14 @@ export class Pipeline {
 			this.rewrites[id] = { ...rw, custom: null };
 			return;
 		}
-		if (rw.pick + 1 < rw.options.length) {
-			this.rewrites[id] = { ...rw, pick: rw.pick + 1 };
-			return;
-		}
 		this.rewrites[id] = { ...rw, busy: true };
 		try {
+			if (rw.pick + 1 < rw.options.length) {
+				this.rewrites[id] = { ...rw, pick: rw.pick + 1, busy: true };
+				await this.fitOne(this.lines[i]);
+				this.rewrites[id] = { ...this.rewrites[id], busy: false };
+				return;
+			}
 			const neighbours = [this.lines[i - 1], this.lines[i + 1]]
 				.filter(Boolean)
 				.map((l) => ({ speaker: l.speaker, text: this.text(l.id) }));
@@ -216,8 +222,10 @@ export class Pipeline {
 				options,
 				pick: Math.min(rw.pick + 1, options.length - 1),
 				custom: null,
-				busy: false
+				busy: true
 			};
+			await this.fitOne(this.lines[i]);
+			this.rewrites[id] = { ...this.rewrites[id], busy: false };
 		} catch (e) {
 			this.rewrites[id] = { ...rw, busy: false };
 			this.error = e instanceof Error ? e.message : String(e);
@@ -285,12 +293,7 @@ export class Pipeline {
 				}
 			};
 			await Promise.all(Array.from({ length: VOICE_CONCURRENCY }, worker));
-			let spoken = results.filter((r): r is Spoken => r !== null);
-			for (let round = 0; round < FIT_ROUNDS; round++) {
-				const refit = await this.refit(spoken);
-				if (!refit) break;
-				spoken = refit;
-			}
+			const spoken = results.filter((r): r is Spoken => r !== null);
 			let bed = this.bed;
 			let duckBed = true;
 			if (this.separation === 'pending' && this.stems) {
@@ -390,6 +393,38 @@ export class Pipeline {
 			console.info('separation unavailable:', e instanceof Error ? e.message : e);
 			this.separation = 'unavailable';
 			return null;
+		}
+	}
+
+	// Speaks every shown reading and fits the misfits before anything is
+	// shown as final, so the transcript is exactly what gets voiced.
+	private async fitAll() {
+		const lines = audible(this.lines, this.muted);
+		const results: (Spoken | null)[] = new Array(lines.length).fill(null);
+		let next = 0;
+		const worker = async () => {
+			while (next < lines.length) {
+				const i = next++;
+				const voice = this.voices[lines[i].speaker] ?? defaultVoice(lines[i].speaker);
+				results[i] = await this.speakFitting(lines[i], voice);
+			}
+		};
+		await Promise.all(Array.from({ length: VOICE_CONCURRENCY }, worker));
+		let spoken = results.filter((r): r is Spoken => r !== null);
+		for (let round = 0; round < FIT_ROUNDS; round++) {
+			const refit = await this.refit(spoken);
+			if (!refit) break;
+			spoken = refit;
+		}
+	}
+
+	private async fitOne(line: Line) {
+		const voice = this.voices[line.speaker] ?? defaultVoice(line.speaker);
+		let spoken = await this.speakFitting(line, voice);
+		for (let round = 0; spoken && round < FIT_ROUNDS; round++) {
+			const refit = await this.refit([spoken]);
+			if (!refit) break;
+			spoken = refit[0];
 		}
 	}
 
