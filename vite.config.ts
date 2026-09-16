@@ -10,7 +10,11 @@ export default defineConfig({
 					filename.split(/[/\\]/).includes('node_modules') ? undefined : true
 			},
 
-			adapter: adapter()
+			adapter: adapter({
+				platformProxy: {
+					configPath: process.env.BLR_LIVE ? 'wrangler.jsonc' : 'wrangler.dev.jsonc'
+				}
+			})
 		})
 	],
 	test: {
