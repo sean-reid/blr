@@ -1,0 +1,633 @@
+{
+	"results": {
+		"channels": [
+			{
+				"alternatives": [
+					{
+						"transcript": "Knew I have to connect it into the amplifier, but where? It just doesn't fit in. Why not store and get more information? And by the way, how are things going in school? Oh, okay, dad. But school here isn't like it was back in Morristown. Well, you know, son, maybe school is like your radio. This oscillator will do its work well. But as you said, you still have to",
+						"words": [
+							{
+								"word": "knew",
+								"punctuated_word": "Knew",
+								"start": 0,
+								"end": 0.39999998,
+								"confidence": 0.50878906,
+								"speaker": 0
+							},
+							{
+								"word": "i",
+								"punctuated_word": "I",
+								"start": 0.39999998,
+								"end": 0.56,
+								"confidence": 0.97998047,
+								"speaker": 0
+							},
+							{
+								"word": "have",
+								"punctuated_word": "have",
+								"start": 0.56,
+								"end": 0.71999997,
+								"confidence": 0.8027344,
+								"speaker": 0
+							},
+							{
+								"word": "to",
+								"punctuated_word": "to",
+								"start": 0.71999997,
+								"end": 0.79999995,
+								"confidence": 1,
+								"speaker": 0
+							},
+							{
+								"word": "connect",
+								"punctuated_word": "connect",
+								"start": 0.79999995,
+								"end": 1.04,
+								"confidence": 0.99902344,
+								"speaker": 0
+							},
+							{
+								"word": "it",
+								"punctuated_word": "it",
+								"start": 1.04,
+								"end": 1.12,
+								"confidence": 0.9941406,
+								"speaker": 0
+							},
+							{
+								"word": "into",
+								"punctuated_word": "into",
+								"start": 1.12,
+								"end": 1.36,
+								"confidence": 0.98095703,
+								"speaker": 0
+							},
+							{
+								"word": "the",
+								"punctuated_word": "the",
+								"start": 1.36,
+								"end": 1.52,
+								"confidence": 0.99902344,
+								"speaker": 0
+							},
+							{
+								"word": "amplifier",
+								"punctuated_word": "amplifier,",
+								"start": 1.52,
+								"end": 2.24,
+								"confidence": 0.96207684,
+								"speaker": 0
+							},
+							{
+								"word": "but",
+								"punctuated_word": "but",
+								"start": 2.24,
+								"end": 2.32,
+								"confidence": 1,
+								"speaker": 0
+							},
+							{
+								"word": "where",
+								"punctuated_word": "where?",
+								"start": 2.32,
+								"end": 2.72,
+								"confidence": 0.87231445,
+								"speaker": 0
+							},
+							{
+								"word": "it",
+								"punctuated_word": "It",
+								"start": 2.72,
+								"end": 2.8799999,
+								"confidence": 0.9941406,
+								"speaker": 0
+							},
+							{
+								"word": "just",
+								"punctuated_word": "just",
+								"start": 2.8799999,
+								"end": 3.04,
+								"confidence": 0.98291016,
+								"speaker": 0
+							},
+							{
+								"word": "doesn't",
+								"punctuated_word": "doesn't",
+								"start": 3.04,
+								"end": 3.28,
+								"confidence": 0.9995117,
+								"speaker": 0
+							},
+							{
+								"word": "fit",
+								"punctuated_word": "fit",
+								"start": 3.28,
+								"end": 3.52,
+								"confidence": 1,
+								"speaker": 0
+							},
+							{
+								"word": "in",
+								"punctuated_word": "in.",
+								"start": 3.52,
+								"end": 4.08,
+								"confidence": 0.99902344,
+								"speaker": 0
+							},
+							{
+								"word": "why",
+								"punctuated_word": "Why",
+								"start": 4.16,
+								"end": 4.4,
+								"confidence": 0.77978516,
+								"speaker": 1
+							},
+							{
+								"word": "not",
+								"punctuated_word": "not",
+								"start": 4.4,
+								"end": 4.56,
+								"confidence": 0.94970703,
+								"speaker": 1
+							},
+							{
+								"word": "store",
+								"punctuated_word": "store",
+								"start": 4.56,
+								"end": 4.96,
+								"confidence": 0.78271484,
+								"speaker": 1
+							},
+							{
+								"word": "and",
+								"punctuated_word": "and",
+								"start": 4.96,
+								"end": 5.2,
+								"confidence": 0.984375,
+								"speaker": 1
+							},
+							{
+								"word": "get",
+								"punctuated_word": "get",
+								"start": 5.2,
+								"end": 5.3599997,
+								"confidence": 1,
+								"speaker": 1
+							},
+							{
+								"word": "more",
+								"punctuated_word": "more",
+								"start": 5.3599997,
+								"end": 5.68,
+								"confidence": 1,
+								"speaker": 1
+							},
+							{
+								"word": "information",
+								"punctuated_word": "information?",
+								"start": 5.68,
+								"end": 6.4,
+								"confidence": 0.9621582,
+								"speaker": 1
+							},
+							{
+								"word": "and",
+								"punctuated_word": "And",
+								"start": 6.96,
+								"end": 7.2,
+								"confidence": 0.9243164,
+								"speaker": 1
+							},
+							{
+								"word": "by",
+								"punctuated_word": "by",
+								"start": 7.2,
+								"end": 7.44,
+								"confidence": 0.8720703,
+								"speaker": 1
+							},
+							{
+								"word": "the",
+								"punctuated_word": "the",
+								"start": 7.44,
+								"end": 7.52,
+								"confidence": 1,
+								"speaker": 1
+							},
+							{
+								"word": "way",
+								"punctuated_word": "way,",
+								"start": 7.52,
+								"end": 8,
+								"confidence": 0.99853516,
+								"speaker": 1
+							},
+							{
+								"word": "how",
+								"punctuated_word": "how",
+								"start": 8.16,
+								"end": 8.32,
+								"confidence": 0.9980469,
+								"speaker": 1
+							},
+							{
+								"word": "are",
+								"punctuated_word": "are",
+								"start": 8.32,
+								"end": 8.48,
+								"confidence": 0.58496094,
+								"speaker": 1
+							},
+							{
+								"word": "things",
+								"punctuated_word": "things",
+								"start": 8.48,
+								"end": 8.639999,
+								"confidence": 1,
+								"speaker": 1
+							},
+							{
+								"word": "going",
+								"punctuated_word": "going",
+								"start": 8.639999,
+								"end": 8.88,
+								"confidence": 1,
+								"speaker": 1
+							},
+							{
+								"word": "in",
+								"punctuated_word": "in",
+								"start": 8.88,
+								"end": 9.04,
+								"confidence": 0.9980469,
+								"speaker": 1
+							},
+							{
+								"word": "school",
+								"punctuated_word": "school?",
+								"start": 9.04,
+								"end": 9.679999,
+								"confidence": 0.99902344,
+								"speaker": 1
+							},
+							{
+								"word": "oh",
+								"punctuated_word": "Oh,",
+								"start": 10.16,
+								"end": 10.959999,
+								"confidence": 0.9716797,
+								"speaker": 0
+							},
+							{
+								"word": "okay",
+								"punctuated_word": "okay,",
+								"start": 11.04,
+								"end": 11.679999,
+								"confidence": 0.9855957,
+								"speaker": 0
+							},
+							{
+								"word": "dad",
+								"punctuated_word": "dad.",
+								"start": 11.679999,
+								"end": 11.92,
+								"confidence": 0.9597168,
+								"speaker": 0
+							},
+							{
+								"word": "but",
+								"punctuated_word": "But",
+								"start": 12.845,
+								"end": 13.165,
+								"confidence": 1,
+								"speaker": 0
+							},
+							{
+								"word": "school",
+								"punctuated_word": "school",
+								"start": 13.165,
+								"end": 13.725,
+								"confidence": 0.9941406,
+								"speaker": 0
+							},
+							{
+								"word": "here",
+								"punctuated_word": "here",
+								"start": 13.725,
+								"end": 13.965,
+								"confidence": 1,
+								"speaker": 0
+							},
+							{
+								"word": "isn't",
+								"punctuated_word": "isn't",
+								"start": 13.965,
+								"end": 14.285,
+								"confidence": 0.99853516,
+								"speaker": 0
+							},
+							{
+								"word": "like",
+								"punctuated_word": "like",
+								"start": 14.285,
+								"end": 14.445001,
+								"confidence": 1,
+								"speaker": 0
+							},
+							{
+								"word": "it",
+								"punctuated_word": "it",
+								"start": 14.445001,
+								"end": 14.525001,
+								"confidence": 0.9921875,
+								"speaker": 0
+							},
+							{
+								"word": "was",
+								"punctuated_word": "was",
+								"start": 14.525001,
+								"end": 14.685,
+								"confidence": 1,
+								"speaker": 0
+							},
+							{
+								"word": "back",
+								"punctuated_word": "back",
+								"start": 14.685,
+								"end": 14.925,
+								"confidence": 1,
+								"speaker": 0
+							},
+							{
+								"word": "in",
+								"punctuated_word": "in",
+								"start": 14.925,
+								"end": 15.005,
+								"confidence": 0.9941406,
+								"speaker": 0
+							},
+							{
+								"word": "morristown",
+								"punctuated_word": "Morristown.",
+								"start": 15.005,
+								"end": 15.965,
+								"confidence": 0.9772949,
+								"speaker": 0
+							},
+							{
+								"word": "well",
+								"punctuated_word": "Well,",
+								"start": 16.045,
+								"end": 16.445,
+								"confidence": 0.9538574,
+								"speaker": 0
+							},
+							{
+								"word": "you",
+								"punctuated_word": "you",
+								"start": 16.445,
+								"end": 16.525,
+								"confidence": 1,
+								"speaker": 0
+							},
+							{
+								"word": "know",
+								"punctuated_word": "know,",
+								"start": 16.525,
+								"end": 16.765,
+								"confidence": 0.98217773,
+								"speaker": 1
+							},
+							{
+								"word": "son",
+								"punctuated_word": "son,",
+								"start": 16.765,
+								"end": 17.244999,
+								"confidence": 0.95166016,
+								"speaker": 1
+							},
+							{
+								"word": "maybe",
+								"punctuated_word": "maybe",
+								"start": 17.245,
+								"end": 17.565,
+								"confidence": 1,
+								"speaker": 1
+							},
+							{
+								"word": "school",
+								"punctuated_word": "school",
+								"start": 17.565,
+								"end": 17.965,
+								"confidence": 1,
+								"speaker": 1
+							},
+							{
+								"word": "is",
+								"punctuated_word": "is",
+								"start": 17.965,
+								"end": 18.285,
+								"confidence": 0.99902344,
+								"speaker": 1
+							},
+							{
+								"word": "like",
+								"punctuated_word": "like",
+								"start": 18.285,
+								"end": 18.605,
+								"confidence": 0.9970703,
+								"speaker": 1
+							},
+							{
+								"word": "your",
+								"punctuated_word": "your",
+								"start": 18.605,
+								"end": 18.765,
+								"confidence": 0.99902344,
+								"speaker": 1
+							},
+							{
+								"word": "radio",
+								"punctuated_word": "radio.",
+								"start": 18.765,
+								"end": 19.565,
+								"confidence": 0.99609375,
+								"speaker": 1
+							},
+							{
+								"word": "this",
+								"punctuated_word": "This",
+								"start": 19.965,
+								"end": 20.205,
+								"confidence": 1,
+								"speaker": 1
+							},
+							{
+								"word": "oscillator",
+								"punctuated_word": "oscillator",
+								"start": 20.205,
+								"end": 20.765,
+								"confidence": 0.9996745,
+								"speaker": 1
+							},
+							{
+								"word": "will",
+								"punctuated_word": "will",
+								"start": 20.765,
+								"end": 21.085,
+								"confidence": 1,
+								"speaker": 1
+							},
+							{
+								"word": "do",
+								"punctuated_word": "do",
+								"start": 21.085,
+								"end": 21.165,
+								"confidence": 1,
+								"speaker": 1
+							},
+							{
+								"word": "its",
+								"punctuated_word": "its",
+								"start": 21.165,
+								"end": 21.404999,
+								"confidence": 0.99609375,
+								"speaker": 1
+							},
+							{
+								"word": "work",
+								"punctuated_word": "work",
+								"start": 21.404999,
+								"end": 21.645,
+								"confidence": 1,
+								"speaker": 1
+							},
+							{
+								"word": "well",
+								"punctuated_word": "well.",
+								"start": 21.645,
+								"end": 22.205,
+								"confidence": 0.8798828,
+								"speaker": 1
+							},
+							{
+								"word": "but",
+								"punctuated_word": "But",
+								"start": 22.525002,
+								"end": 22.765,
+								"confidence": 1,
+								"speaker": 1
+							},
+							{
+								"word": "as",
+								"punctuated_word": "as",
+								"start": 22.765,
+								"end": 22.925,
+								"confidence": 0.95166016,
+								"speaker": 1
+							},
+							{
+								"word": "you",
+								"punctuated_word": "you",
+								"start": 22.925,
+								"end": 23.085,
+								"confidence": 1,
+								"speaker": 1
+							},
+							{
+								"word": "said",
+								"punctuated_word": "said,",
+								"start": 23.085,
+								"end": 23.724998,
+								"confidence": 0.9975586,
+								"speaker": 1
+							},
+							{
+								"word": "you",
+								"punctuated_word": "you",
+								"start": 23.725,
+								"end": 24.045,
+								"confidence": 0.99902344,
+								"speaker": 1
+							},
+							{
+								"word": "still",
+								"punctuated_word": "still",
+								"start": 24.045,
+								"end": 24.365,
+								"confidence": 0.9951172,
+								"speaker": 1
+							},
+							{
+								"word": "have",
+								"punctuated_word": "have",
+								"start": 24.365,
+								"end": 24.685001,
+								"confidence": 0.99902344,
+								"speaker": 1
+							},
+							{
+								"word": "to",
+								"punctuated_word": "to",
+								"start": 24.685001,
+								"end": 26.525,
+								"confidence": 0.99609375,
+								"speaker": 0
+							}
+						]
+					}
+				]
+			}
+		],
+		"utterances": [
+			{
+				"speaker": 0,
+				"start": 0,
+				"end": 6.4,
+				"transcript": "Knew I have to connect it into the amplifier, but where? It just doesn't fit in. Why not store and get more information?"
+			},
+			{
+				"speaker": 1,
+				"start": 6.96,
+				"end": 9.679999,
+				"transcript": "And by the way, how are things going in school?"
+			},
+			{
+				"speaker": 0,
+				"start": 10.16,
+				"end": 10.959999,
+				"transcript": "Oh,"
+			},
+			{
+				"speaker": 0,
+				"start": 11.04,
+				"end": 11.92,
+				"transcript": "okay, dad."
+			},
+			{
+				"speaker": 0,
+				"start": 12.845,
+				"end": 15.965,
+				"transcript": "But school here isn't like it was back in Morristown."
+			},
+			{
+				"speaker": 1,
+				"start": 16.045,
+				"end": 19.565,
+				"transcript": "Well, you know, son, maybe school is like your radio."
+			},
+			{
+				"speaker": 1,
+				"start": 19.965,
+				"end": 22.205,
+				"transcript": "This oscillator will do its work well."
+			},
+			{
+				"speaker": 1,
+				"start": 22.525002,
+				"end": 26.525,
+				"transcript": "But as you said, you still have to"
+			}
+		]
+	}
+}
