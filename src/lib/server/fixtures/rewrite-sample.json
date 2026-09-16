@@ -1,1 +1,104 @@
-{ "lines": [] }
+{
+	"lines": [
+		{
+			"id": "l0",
+			"options": [
+				"I'm not allowed to talk to Mark at the bakery",
+				"My mom buys bread on Mondays",
+				"I'm no good at making pancakes",
+				"People are eating muffins in my room",
+				"I need to find a new bike pump",
+				"My brother's dog is pretty big"
+			]
+		},
+		{
+			"id": "l1",
+			"options": [
+				"My cat is mad",
+				"I'm full of beans",
+				"You're not my mom",
+				"I need a nap",
+				"This pen is dry",
+				"I hate my socks"
+			]
+		},
+		{
+			"id": "l2",
+			"options": [
+				"Why not buy more gum",
+				"People are boring me",
+				"My feet are getting muddy",
+				"I'm not paying the babysitter",
+				"Buy me a pumpkin pie",
+				"My brother's phone is busted"
+			]
+		},
+		{
+			"id": "l3",
+			"options": [
+				"And by the way, my fridge is empty",
+				"My boss is pretty mean",
+				"I'm moving to Mexico",
+				"My cat has no name",
+				"People are watching me",
+				"I'm not eating lunch"
+			]
+		},
+		{
+			"id": "l4",
+			"options": ["No way", "Oh boy", "I'm mad", "Not now", "Oh no", "Bye mom"]
+		},
+		{
+			"id": "l5",
+			"options": [
+				"But money isn't made of paper clips",
+				"My bedroom's full of old bikes",
+				"But people aren't made of metal",
+				"My mom's making me eat pudding",
+				"But my dog's name is Mr. Mike",
+				"My backpack's full of old phones"
+			]
+		},
+		{
+			"id": "l6",
+			"options": ["Hey you", "No go", "My guy", "Oh no", "Bye bye", "Hey mom"]
+		},
+		{
+			"id": "l7",
+			"options": [
+				"Know, son, maybe life is like your phone",
+				"My mom knows how to make a cake",
+				"Know, mom, maybe I'm not a kid",
+				"People know how to make me mad",
+				"My brother knows how to play guitar",
+				"I know how to make a mess"
+			]
+		},
+		{
+			"id": "l8",
+			"options": [
+				"This pillow will do its job well",
+				"My toaster will make some toast",
+				"This computer will play some games",
+				"My book will tell a story",
+				"This chair will hold my weight",
+				"My dog will chase a ball"
+			]
+		},
+		{
+			"id": "l9",
+			"options": [
+				"But as you said, my mouth is numb",
+				"My mouth is full of food",
+				"But as you see, my bike is broken",
+				"My face is made of skin",
+				"But as you know, my name is Bob",
+				"My hand is holding a pen"
+			]
+		},
+		{
+			"id": "l10",
+			"options": ["no", "so", "up", "on", "by", "my"]
+		}
+	]
+}

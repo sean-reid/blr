@@ -19,7 +19,7 @@ export function mockClient(): AiClient {
 		},
 		async chatJson(req) {
 			const heads = [
-				...req.user.matchAll(/^Line (\S+), speaker \d+, \d+ syllables, original: "(.*)"$/gm)
+				...req.user.matchAll(/^Line (\S+), speaker \d+, \d+ syllables[^:]*: "(.*)"$/gm)
 			];
 			const known = new Map((rewrite as RewriteResponse).lines.map((l) => [l.id, l.options]));
 			return {
