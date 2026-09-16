@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { outputName } from './remux';
+import { outputName } from './names';
 
 describe('outputName', () => {
 	it('inserts blr before the extension and always writes mp4', () => {
