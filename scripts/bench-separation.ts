@@ -31,8 +31,7 @@ interface Result {
 	loadMs?: number;
 	separateMs?: number;
 	realtime?: number;
-	peakMainHeapMb?: number;
-	peakWorkerHeapMb?: number;
+	peakHeapMb?: number;
 	peakRendererRssMb?: number;
 	mixDb?: number;
 	vocalDb?: number;
@@ -64,9 +63,11 @@ async function launch(headless: boolean): Promise<Browser> {
 	return chromium.launch({ channel: 'chromium', headless, args: GPU_ARGS });
 }
 
+/** WebGPU only exists in secure contexts, so the probe runs on the served page rather than about:blank. */
 async function hasGpuAdapter(browser: Browser) {
 	const page = await browser.newPage();
 	try {
+		await page.goto(`${BASE_URL}/dev/separate`);
 		return await page.evaluate(async () => {
 			const gpu = (navigator as unknown as { gpu?: { requestAdapter(): Promise<unknown> } }).gpu;
 			return !!gpu && (await gpu.requestAdapter()) !== null;
@@ -76,29 +77,31 @@ async function hasGpuAdapter(browser: Browser) {
 	}
 }
 
-function rendererRssMb(browserPid: number): number {
+async function rendererRssMb(browser: Browser): Promise<number> {
 	try {
-		const children = execFileSync('pgrep', ['-P', String(browserPid)], { encoding: 'utf8' })
-			.split('\n')
-			.filter(Boolean);
-		if (!children.length) return 0;
-		const rows = execFileSync('ps', ['-o', 'rss=,command=', '-p', children.join(',')], {
-			encoding: 'utf8'
-		}).split('\n');
-		let max = 0;
-		for (const row of rows) {
-			if (!row.includes('--type=renderer')) continue;
-			max = Math.max(max, Number(row.trim().split(/\s+/)[0]) / 1024);
-		}
-		return max;
+		const session = await browser.newBrowserCDPSession();
+		const { processInfo } = (await session.send('SystemInfo.getProcessInfo')) as {
+			processInfo: { type: string; id: number }[];
+		};
+		await session.detach();
+		const pids = processInfo.filter((p) => p.type === 'renderer').map((p) => String(p.id));
+		if (!pids.length) return 0;
+		const rows = execFileSync('ps', ['-o', 'rss=', '-p', pids.join(',')], { encoding: 'utf8' });
+		return Math.max(
+			0,
+			...rows
+				.split('\n')
+				.filter(Boolean)
+				.map((r) => Number(r.trim()) / 1024)
+		);
 	} catch {
 		return 0;
 	}
 }
 
-async function heapMb(target: { evaluate: Page['evaluate'] }): Promise<number> {
+async function heapMb(page: Page): Promise<number> {
 	try {
-		const bytes = await target.evaluate(
+		const bytes = await page.evaluate(
 			() =>
 				(performance as unknown as { memory?: { usedJSHeapSize: number } }).memory
 					?.usedJSHeapSize ?? 0
@@ -123,21 +126,17 @@ async function benchProvider(
 		await serveModel(page);
 		await page.goto(`${BASE_URL}/dev/separate`);
 		const clip = await runSeparation(page, provider.label, CLIP_SECONDS);
-		const browserPid = browser.process()?.pid ?? 0;
-		let peakMain = 0;
-		let peakWorker = 0;
+		let peakHeap = 0;
 		let peakRss = 0;
 		const status = page.locator('.status');
 		for (;;) {
 			const state = await status.getAttribute('data-status');
 			if (state === 'done' || state === 'error') break;
-			peakMain = Math.max(peakMain, await heapMb(page));
-			for (const worker of page.workers()) peakWorker = Math.max(peakWorker, await heapMb(worker));
-			peakRss = Math.max(peakRss, rendererRssMb(browserPid));
+			peakHeap = Math.max(peakHeap, await heapMb(page));
+			peakRss = Math.max(peakRss, await rendererRssMb(browser));
 			await page.waitForTimeout(250);
 		}
-		result.peakMainHeapMb = peakMain;
-		result.peakWorkerHeapMb = peakWorker;
+		result.peakHeapMb = peakHeap;
 		result.peakRendererRssMb = peakRss;
 		const alerts = await page.getByRole('alert').allTextContents();
 		if (alerts.length) {
@@ -188,9 +187,7 @@ function report(r: Result) {
 			`  speech/gap      mix ${r.mixDb!.toFixed(1)} dB, vocals ${r.vocalDb!.toFixed(1)} dB`
 		);
 	}
-	console.log(
-		`  peak JS heap    main ${r.peakMainHeapMb?.toFixed(0)} MB, worker ${r.peakWorkerHeapMb?.toFixed(0)} MB`
-	);
+	console.log(`  peak JS heap    ${r.peakHeapMb?.toFixed(0)} MB on the page thread`);
 	console.log(`  peak renderer   ${r.peakRendererRssMb?.toFixed(0)} MB RSS`);
 }
 
