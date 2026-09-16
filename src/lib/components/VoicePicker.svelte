@@ -1,14 +1,25 @@
 <script lang="ts">
 	import { VOICES } from '$lib/voice/voices';
 	import { decodeSpeech, speak } from '$lib/voice/client';
+	import { speakerLetter, speakerTitle, type Names } from '$lib/transcript/names';
+	import SpeakerName from './SpeakerName.svelte';
 
 	let {
 		speaker,
 		value,
-		onchange
-	}: { speaker: number; value: string; onchange: (voice: string) => void } = $props();
+		names = {},
+		onchange,
+		onrename
+	}: {
+		speaker: number;
+		value: string;
+		names?: Names;
+		onchange: (voice: string) => void;
+		onrename?: (speaker: number, name: string) => void;
+	} = $props();
 
-	let letter = $derived('ABCDEFGH'[speaker] ?? '?');
+	let letter = $derived(speakerLetter(speaker));
+	let title = $derived(speakerTitle(speaker, names));
 	let playing = $state(false);
 
 	async function hear() {
@@ -33,13 +44,9 @@
 	}
 </script>
 
-<label class="picker" style:--swatch="var(--speaker-{'abcdefgh'[speaker] ?? 'a'})">
-	<span class="letter">{letter}</span>
-	<select
-		{value}
-		aria-label="Voice for speaker {letter}"
-		onchange={(e) => onchange(e.currentTarget.value)}
-	>
+<div class="picker" style:--swatch="var(--speaker-{'abcdefgh'[speaker] ?? 'a'})">
+	<SpeakerName {speaker} {names} size="picker" {onrename} />
+	<select {value} aria-label="Voice for {title}" onchange={(e) => onchange(e.currentTarget.value)}>
 		{#each VOICES as v (v.id)}
 			<option value={v.id}>{v.label}</option>
 		{/each}
@@ -49,11 +56,11 @@
 		class="hear mono"
 		onclick={hear}
 		disabled={playing}
-		aria-label="Hear speaker {letter}"
+		aria-label="Hear {title}"
 	>
 		{playing ? '…' : 'Hear'}
 	</button>
-</label>
+</div>
 
 <style>
 	.picker {
@@ -61,18 +68,6 @@
 		align-items: center;
 		gap: 8px;
 		min-height: var(--tap);
-	}
-
-	.letter {
-		width: 24px;
-		height: 24px;
-		display: grid;
-		place-items: center;
-		border: 1px solid var(--swatch);
-		border-radius: var(--radius);
-		color: var(--swatch);
-		font-size: 0.75rem;
-		font-weight: 600;
 	}
 
 	select {

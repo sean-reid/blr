@@ -1,14 +1,15 @@
-import { speakerLetter, type ShareLine } from './types';
+import { speakerTitle, type Names } from '$lib/transcript/names';
+import type { ShareLine } from './types';
 
 const MIN_CUE = 0.5;
 
-export function toVtt(lines: ShareLine[]): string {
+export function toVtt(lines: ShareLine[], names: Names = {}): string {
 	const cues = lines
 		.filter((l) => l.text.trim())
 		.sort((a, b) => a.start - b.start)
 		.map((l, i) => {
 			const end = Math.max(l.end, l.start + MIN_CUE);
-			const voice = `<v Speaker ${speakerLetter(l.speaker)}>`;
+			const voice = `<v ${escapeCue(speakerTitle(l.speaker, names))}>`;
 			return `${i + 1}\n${stamp(l.start)} --> ${stamp(end)}\n${voice}${escapeCue(l.text)}`;
 		});
 	return ['WEBVTT', ...cues].join('\n\n') + '\n';

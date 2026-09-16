@@ -1,3 +1,5 @@
+export { SPEAKER_LETTERS, speakerLetter } from '$lib/transcript/names';
+
 export interface ShareLine {
 	speaker: number;
 	start: number;
@@ -10,10 +12,4 @@ export interface ShareResult {
 	id: string;
 	url: string;
 	expires: string;
-}
-
-export const SPEAKER_LETTERS = 'ABCDEFGH';
-
-export function speakerLetter(speaker: number): string {
-	return SPEAKER_LETTERS[speaker] ?? '?';
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { groupLines, smoothSpeakers, speakersOf } from './lines';
+import { audible, groupLines, smoothSpeakers, speakersOf } from './lines';
 import { normalizeNova } from './normalize';
 import sample from '../server/fixtures/nova-sample.json';
 
@@ -107,5 +107,16 @@ describe('groupLines', () => {
 
 	it('handles an empty transcript', () => {
 		expect(groupLines({ words: [], duration: 0 })).toEqual([]);
+	});
+});
+
+describe('audible', () => {
+	it('drops muted lines and keeps the order of the rest', () => {
+		const lines = groupLines(transcript);
+		const kept = audible(lines, { [lines[1].id]: true, [lines[4].id]: false });
+		expect(kept.length).toBe(lines.length - 1);
+		expect(kept.map((l) => l.id)).not.toContain(lines[1].id);
+		expect(kept[1]).toBe(lines[2]);
+		expect(audible(lines, {})).toEqual(lines);
 	});
 });

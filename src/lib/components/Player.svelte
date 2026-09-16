@@ -4,11 +4,18 @@
 	import { toAudioBuffer } from '$lib/voice/render';
 	import type { Range } from '$lib/media/range';
 
+	export interface Caption {
+		text: string;
+		label: string;
+		speaker: number;
+	}
+
 	let {
 		src,
 		mixed = null,
 		useMixed = false,
 		range = null,
+		caption = null,
 		ontime,
 		video = $bindable<HTMLVideoElement | null>(null)
 	}: {
@@ -16,6 +23,7 @@
 		mixed?: Pcm | null;
 		useMixed?: boolean;
 		range?: Range | null;
+		caption?: Caption | null;
 		ontime?: (t: number) => void;
 		video?: HTMLVideoElement | null;
 	} = $props();
@@ -64,38 +72,88 @@
 	});
 </script>
 
-<!-- svelte-ignore a11y_media_has_caption -->
-<video
-	bind:this={video}
-	{src}
-	controls
-	playsinline
-	preload="metadata"
-	data-audio={useMixed && mixed ? 'new' : 'original'}
-	onplay={() => {
-		if (video && range && (video.currentTime < range.start || video.currentTime >= range.end)) {
-			video.currentTime = range.start;
-		}
-		start();
-	}}
-	onpause={stop}
-	onseeking={() => {
-		if (video && !video.paused) start();
-	}}
-	onended={stop}
-	ontimeupdate={(e) => {
-		const t = e.currentTarget.currentTime;
-		if (range && t >= range.end && !e.currentTarget.paused) e.currentTarget.pause();
-		ontime?.(t);
-	}}
-></video>
+<div class="player">
+	<!-- svelte-ignore a11y_media_has_caption -->
+	<video
+		bind:this={video}
+		{src}
+		controls
+		playsinline
+		preload="metadata"
+		data-audio={useMixed && mixed ? 'new' : 'original'}
+		onplay={() => {
+			if (video && range && (video.currentTime < range.start || video.currentTime >= range.end)) {
+				video.currentTime = range.start;
+			}
+			start();
+		}}
+		onpause={stop}
+		onseeking={() => {
+			if (video && !video.paused) start();
+		}}
+		onended={stop}
+		ontimeupdate={(e) => {
+			const t = e.currentTarget.currentTime;
+			if (range && t >= range.end && !e.currentTarget.paused) e.currentTarget.pause();
+			ontime?.(t);
+		}}
+	></video>
+	{#if caption}
+		<p
+			class="caption"
+			aria-live="off"
+			style:--swatch="var(--speaker-{'abcdefgh'[caption.speaker] ?? 'a'})"
+		>
+			<span class="who">{caption.label}</span>
+			<span class="text">{caption.text}</span>
+		</p>
+	{/if}
+</div>
 
 <style>
+	.player {
+		position: relative;
+	}
+
 	video {
 		display: block;
 		width: 100%;
 		aspect-ratio: 16 / 9;
 		background: #000;
 		border-radius: var(--radius);
+	}
+
+	.caption {
+		position: absolute;
+		left: 50%;
+		bottom: clamp(56px, 14%, 72px);
+		transform: translateX(-50%);
+		max-width: calc(100% - 32px);
+		display: flex;
+		gap: 8px;
+		align-items: baseline;
+		padding: 4px 10px;
+		background: rgb(20 18 15 / 85%);
+		color: #f5f1ea;
+		border-radius: var(--radius);
+		font-size: clamp(0.875rem, 2.6vw, 1.0625rem);
+		line-height: 1.4;
+		white-space: nowrap;
+		pointer-events: none;
+	}
+
+	.who {
+		flex-shrink: 0;
+		max-width: 12ch;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		color: var(--swatch);
+		font-weight: 600;
+		font-size: 0.8125rem;
+	}
+
+	.text {
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 </style>

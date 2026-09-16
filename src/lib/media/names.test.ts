@@ -7,4 +7,9 @@ describe('outputName', () => {
 		expect(outputName('clip')).toBe('clip.blr.mp4');
 		expect(outputName('a.b.webm')).toBe('a.b.blr.mp4');
 	});
+
+	it('takes another extension for sidecars', () => {
+		expect(outputName('holiday.mov', 'vtt')).toBe('holiday.blr.vtt');
+		expect(outputName('clip', 'srt')).toBe('clip.blr.srt');
+	});
 });

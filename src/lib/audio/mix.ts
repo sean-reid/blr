@@ -17,12 +17,12 @@ export interface Clip {
 export const DUCK_GAIN = 0.12;
 export const RAMP = 0.06;
 
-export function duck(bed: Pcm, spans: Span[], gain = DUCK_GAIN, ramp = RAMP): Pcm {
-	const env = new Float32Array(bed.channels[0].length).fill(1);
-	const r = Math.round(ramp * bed.rate);
+function envelope(length: number, rate: number, spans: Span[], gain: number, ramp: number) {
+	const env = new Float32Array(length).fill(1);
+	const r = Math.round(ramp * rate);
 	for (const s of spans) {
-		const a = Math.round(s.start * bed.rate);
-		const b = Math.round(s.end * bed.rate);
+		const a = Math.round(s.start * rate);
+		const b = Math.round(s.end * rate);
 		for (let i = Math.max(0, a - r); i < Math.min(env.length, b + r); i++) {
 			let g = gain;
 			if (i < a) g = 1 - (1 - gain) * ((i - (a - r)) / r);
@@ -30,9 +30,26 @@ export function duck(bed: Pcm, spans: Span[], gain = DUCK_GAIN, ramp = RAMP): Pc
 			env[i] = Math.min(env[i], g);
 		}
 	}
+	return env;
+}
+
+export function duck(bed: Pcm, spans: Span[], gain = DUCK_GAIN, ramp = RAMP): Pcm {
+	const env = envelope(bed.channels[0].length, bed.rate, spans, gain, ramp);
 	return {
 		rate: bed.rate,
 		channels: bed.channels.map((ch) => ch.map((v, i) => v * env[i]))
+	};
+}
+
+export function restore(bed: Pcm, original: Pcm, spans: Span[], ramp = RAMP): Pcm {
+	if (!spans.length) return bed;
+	const env = envelope(bed.channels[0].length, bed.rate, spans, 0, ramp);
+	return {
+		rate: bed.rate,
+		channels: bed.channels.map((ch, c) => {
+			const src = original.channels[c] ?? original.channels[0];
+			return ch.map((v, i) => v * env[i] + (src[i] ?? 0) * (1 - env[i]));
+		})
 	};
 }
 

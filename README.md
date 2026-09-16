@@ -4,6 +4,8 @@ Bad lip reading generator. Drop a video of people talking and get it back with t
 
 The video never leaves your browser. Audio is extracted locally, sent for transcription, and the new audio is mixed and muxed back in on your machine. Vocal separation runs in the browser too.
 
+Every line can be rerolled, edited, or muted to keep the original speech. Speakers can be renamed, the whole script can be redone clean, and captions can be shown over the player or downloaded as VTT or SRT next to the video.
+
 Share uploads the finished video to a link that plays it with captions and expires after seven days. Nothing is stored unless you share.
 
 Live at [blr.dwainosaur.com](https://blr.dwainosaur.com).

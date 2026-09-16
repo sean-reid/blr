@@ -1,5 +1,6 @@
 import { decodeAudio, encodeWav16, toMono, TRANSCRIBE_RATE } from '$lib/media/audio';
-import { groupLines } from '$lib/transcript/lines';
+import { audible, groupLines } from '$lib/transcript/lines';
+import type { Names } from '$lib/transcript/names';
 import type { Line, Transcript } from '$lib/transcript/types';
 import { loadIndex } from '$lib/viseme/load';
 import type { VisemeIndex } from '$lib/viseme/index';
@@ -8,7 +9,7 @@ import type { Tone } from '$lib/rewrite/types';
 import { decodeSpeech, speak } from '$lib/voice/client';
 import { pcmFromBuffer, renderMix, type Spoken } from '$lib/voice/render';
 import { defaultVoice } from '$lib/voice/voices';
-import { resample, type Pcm } from '$lib/audio/mix';
+import { resample, restore, type Pcm } from '$lib/audio/mix';
 import { outputName } from '$lib/media/names';
 import type { Range } from '$lib/media/range';
 import {
@@ -63,6 +64,8 @@ export class Pipeline {
 	rewrites = $state<Record<string, Rewrite>>({});
 	tone = $state<Tone>('pg13');
 	voices = $state<Record<number, string>>({});
+	names = $state<Names>({});
+	muted = $state<Record<string, boolean>>({});
 	mixed = $state<Pcm | null>(null);
 	stale = $state(false);
 	output = $state<{ url: string; name: string } | null>(null);
@@ -109,19 +112,22 @@ export class Pipeline {
 				this.voices[l.speaker] ??= picked[l.speaker] ?? defaultVoice(l.speaker);
 			this.stage = 'rewriting';
 			this.index = await indexReady;
-			const ranked = await rewriteAll(this.index, this.lines, this.tone, this.fetcher);
-			for (const l of this.lines) {
-				this.rewrites[l.id] = {
-					options: ranked.get(l.id) ?? [],
-					pick: 0,
-					custom: null,
-					busy: false
-				};
-			}
+			this.fill(await rewriteAll(this.index, this.lines, this.tone, this.fetcher));
 			this.stage = 'ready';
 		} catch (e) {
 			this.error = e instanceof Error ? e.message : String(e);
 			this.stage = 'failed';
+		}
+	}
+
+	private fill(ranked: Map<string, Ranked[]>) {
+		for (const l of this.lines) {
+			this.rewrites[l.id] = {
+				options: ranked.get(l.id) ?? [],
+				pick: 0,
+				custom: null,
+				busy: false
+			};
 		}
 	}
 
@@ -190,13 +196,41 @@ export class Pipeline {
 		this.stale = !!this.mixed;
 	}
 
+	setName(speaker: number, name: string) {
+		const trimmed = name.replace(/\s+/g, ' ').trim();
+		if (trimmed) this.names[speaker] = trimmed;
+		else delete this.names[speaker];
+	}
+
+	toggleMute(id: string) {
+		if (!this.lines.some((l) => l.id === id)) return;
+		this.muted[id] = !this.muted[id];
+		this.stale = !!this.mixed;
+	}
+
+	async setTone(tone: Tone) {
+		if (tone === this.tone) return;
+		this.tone = tone;
+		if (this.stage !== 'ready' || !this.index || !this.lines.length) return;
+		this.stage = 'rewriting';
+		this.error = null;
+		try {
+			this.fill(await rewriteAll(this.index, this.lines, tone, this.fetcher));
+			this.stale = !!this.mixed;
+		} catch (e) {
+			this.error = e instanceof Error ? e.message : String(e);
+		} finally {
+			this.stage = 'ready';
+		}
+	}
+
 	async voice() {
 		if (!this.bed || this.stage !== 'ready') return;
 		this.stage = 'voicing';
 		this.error = null;
 		try {
 			const spoken: Spoken[] = [];
-			for (const line of this.lines) {
+			for (const line of audible(this.lines, this.muted)) {
 				const text = this.text(line.id);
 				if (!text) continue;
 				const voice = this.voices[line.speaker] ?? defaultVoice(line.speaker);
@@ -216,6 +250,10 @@ export class Pipeline {
 			} else if (this.separation === 'ready' && this.stems) {
 				bed = (await this.stems) ?? bed;
 				duckBed = bed === this.bed;
+			}
+			if (bed !== this.bed) {
+				const kept = this.lines.filter((l) => this.muted[l.id]);
+				bed = restore(bed, this.bed, kept);
 			}
 			this.stage = 'mixing';
 			await new Promise((r) => setTimeout(r));
@@ -316,6 +354,8 @@ export class Pipeline {
 		this.lines = [];
 		this.rewrites = {};
 		this.voices = {};
+		this.names = {};
+		this.muted = {};
 		this.mixed = null;
 		this.stale = false;
 		this.bed = null;
