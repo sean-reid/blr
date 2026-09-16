@@ -1,15 +1,48 @@
 // Running estimate of how fast the synthesiser speaks, in syllables per
 // second, so readings can be ranked by predicted length before any call.
+export const PACE_PRIOR = 6;
+const STORAGE_KEY = 'blr.pace';
+
 export class Pace {
 	private total = 0;
 	private seconds = 0;
 
-	constructor(private readonly prior = 4.8) {}
+	constructor(private readonly prior = PACE_PRIOR) {
+		this.restore();
+	}
 
 	update(syllables: number, seconds: number) {
 		if (syllables <= 0 || seconds <= 0) return;
 		this.total += syllables;
 		this.seconds += seconds;
+		this.persist();
+	}
+
+	// Measurements survive reloads so the first render of a session already
+	// knows how fast the voice speaks.
+	private restore() {
+		try {
+			const saved = globalThis.localStorage?.getItem(STORAGE_KEY);
+			if (!saved) return;
+			const { total, seconds } = JSON.parse(saved) as { total: number; seconds: number };
+			if (total > 0 && seconds > 0) {
+				this.total = total;
+				this.seconds = seconds;
+			}
+		} catch {
+			/* no storage */
+		}
+	}
+
+	private persist() {
+		try {
+			globalThis.localStorage?.setItem(
+				STORAGE_KEY,
+				JSON.stringify({ total: this.total, seconds: this.seconds })
+			);
+		} catch {
+			/* no storage */
+		}
 	}
 
 	get rate(): number {

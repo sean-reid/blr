@@ -10,6 +10,8 @@ import { decodeSpeech, speak } from '$lib/voice/client';
 import { alignSpeech } from '$lib/voice/align';
 import { speechDuration } from '$lib/voice/warp';
 import { Pace } from '$lib/voice/pace';
+import { envelopeMatch, lineReport, type LineReport } from '$lib/voice/report';
+import { dev } from '$app/environment';
 import { tokens } from '$lib/rewrite/client';
 import { trimSilence } from '$lib/audio/silence';
 import { pcmFromBuffer, renderMix, type Spoken } from '$lib/voice/render';
@@ -86,6 +88,7 @@ export class Pipeline {
 	private index: VisemeIndex | null = null;
 	private pace = new Pace();
 	private spokenCache: Record<string, Spoken> = {};
+	reports = $state<(LineReport & { match?: number })[]>([]);
 	private bed: Pcm | null = null;
 
 	constructor(private fetcher: typeof fetch = fetch) {}
@@ -123,10 +126,29 @@ export class Pipeline {
 			this.stage = 'rewriting';
 			this.index = await indexReady;
 			this.fill(await rewriteAll(this.index, this.lines, this.tone, this.fetcher, this.pace.rate));
+			await this.repairMisfits();
 			this.stage = 'ready';
 		} catch (e) {
 			this.error = e instanceof Error ? e.message : String(e);
 			this.stage = 'failed';
+		}
+	}
+
+	// Lines whose best reading misses the syllable count get one more call
+	// each, and the new options join the old ones in rank order.
+	private async repairMisfits() {
+		if (!this.index) return;
+		const misfits = this.lines.filter((l) => !this.rewrites[l.id]?.options[0]?.fits);
+		if (!misfits.length) return;
+		const fresh = await rewriteAll(this.index, misfits, this.tone, this.fetcher, this.pace.rate);
+		for (const l of misfits) {
+			const rw = this.rewrites[l.id];
+			const known = rw.options.map((o) => o.text);
+			const merged = [
+				...rw.options,
+				...(fresh.get(l.id) ?? []).filter((o) => !known.includes(o.text))
+			].sort((x, y) => Number(y.fits) - Number(x.fits) || y.score - x.score);
+			this.rewrites[l.id] = { ...rw, options: merged, pick: 0 };
 		}
 	}
 
@@ -278,6 +300,7 @@ export class Pipeline {
 				line: { ...s.line, start: s.line.start - offset, end: s.line.end - offset }
 			}));
 			this.mixed = renderMix(bed, local, duckBed);
+			this.report(spoken, local);
 			this.stale = false;
 			this.dropOutput();
 		} catch (e) {
@@ -368,6 +391,29 @@ export class Pipeline {
 		const spoken: Spoken = { line, samples, rate: raw.rate, words };
 		this.spokenCache[key] = spoken;
 		return spoken;
+	}
+
+	// Per-line fit numbers, plus how well the new voice's energy follows the
+	// original's over the line; logged in dev so changes are judged by numbers.
+	private report(spoken: Spoken[], local: Spoken[]) {
+		const voiceOnly = renderMix(
+			{ rate: this.bed!.rate, channels: this.bed!.channels.map((c) => new Float32Array(c.length)) },
+			local,
+			false
+		);
+		this.reports = spoken.map((s, i) => {
+			const r = lineReport(s.line, this.text(s.line.id), s.words ?? []);
+			const l = local[i].line;
+			const match = envelopeMatch(
+				this.bed!.channels[0],
+				voiceOnly.channels[0],
+				this.bed!.rate,
+				l.start,
+				l.end
+			);
+			return { ...r, match: Math.round(match * 100) / 100 };
+		});
+		if (dev) for (const r of this.reports) console.info('sync', JSON.stringify(r));
 	}
 
 	private syllables(text: string): number {
