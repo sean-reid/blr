@@ -47,6 +47,7 @@
 		]
 	},
 	"dependencies": {
+		"mediabunny": "^1.56.3",
 		"onnxruntime-web": "^1.30.0"
 	}
 }
