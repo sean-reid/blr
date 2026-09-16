@@ -28,7 +28,8 @@ pnpm test:e2e
 
 ## Deploy
 
-```sh
-pnpm build
-pnpm exec wrangler deploy
-```
+Every push to `main` that passes CI deploys to [blr.dwainosaur.com](https://blr.dwainosaur.com) through `.github/workflows/deploy.yml`, which can also be run by hand from the Actions tab. The workflow builds, finds or creates the `blr` Turnstile widget and rotates its secret, deploys the Worker with the widget's site key, sets `TURNSTILE_SECRET` and a fresh random `TOKEN_SECRET` (session tokens live fifteen minutes, so a new signing key per deploy costs nothing), then checks that the home page and `/sample.mp4` respond.
+
+The repo needs a `CLOUDFLARE_API_TOKEN` Actions secret with Workers Scripts, Workers AI, Workers KV Storage, Workers R2 Storage and Turnstile write access plus Account Settings read on the account, and Workers Routes and DNS write on the `dwainosaur.com` zone. A `CLOUDFLARE_ACCOUNT_ID` Actions variable overrides the account id baked into the workflow. The R2 buckets and KV namespace named in `wrangler.jsonc` must exist before the first deploy.
+
+Every AI route sits behind an invisible Turnstile challenge, a per-IP rate limit and a daily Workers AI ceiling; `DAILY_NEURONS` in `wrangler.jsonc` caps spend per UTC day. To deploy from a machine that is logged in to Wrangler, run `pnpm build && pnpm exec wrangler deploy` and set the two secrets with `wrangler secret put`.

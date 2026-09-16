@@ -1,0 +1,53 @@
+name: deploy
+
+on:
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+env:
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID || '860e267e26cbf52bdca301d114b3c203' }}
+
+jobs:
+  deploy:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://blr.dwainosaur.com
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - id: turnstile
+        run: node scripts/turnstile-widget.mjs
+      - run: pnpm exec wrangler deploy --var "TURNSTILE_SITE_KEY:$SITE_KEY"
+        env:
+          SITE_KEY: ${{ steps.turnstile.outputs.sitekey }}
+      - run: |
+          printf '%s' "$TURNSTILE_SECRET" | pnpm exec wrangler secret put TURNSTILE_SECRET
+          openssl rand -hex 32 | pnpm exec wrangler secret put TOKEN_SECRET
+        env:
+          TURNSTILE_SECRET: ${{ steps.turnstile.outputs.secret }}
+      - name: smoke
+        run: |
+          curl -fsS --retry 5 --retry-all-errors --retry-delay 5 https://blr.dwainosaur.com/ | grep -q BLR
+          code=$(curl -sS -I -o /dev/null -w '%{http_code}' --retry 5 --retry-all-errors --retry-delay 5 https://blr.dwainosaur.com/sample.mp4)
+          test "$code" = 200 || { echo "sample.mp4 returned $code"; exit 1; }
