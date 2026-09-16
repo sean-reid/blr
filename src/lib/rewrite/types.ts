@@ -8,9 +8,17 @@ export interface LineRequest {
 	lips: number[];
 }
 
+export interface Revision {
+	id: string;
+	speaker: number;
+	text: string;
+	add: number;
+}
+
 export interface RewriteRequest {
 	speakers: number;
 	lines: LineRequest[];
+	revisions?: Revision[];
 	tone: Tone;
 	options: number;
 	context?: { speaker: number; text: string }[];
