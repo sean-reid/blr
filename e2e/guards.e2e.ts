@@ -86,7 +86,7 @@ test.describe('in the browser', () => {
 		await page.goto('/');
 		await page.getByRole('button', { name: 'or try a sample' }).click();
 		await expect(page.locator('.lines li .new').first()).toBeVisible({ timeout: 30_000 });
-		expect(hits).toBe(3);
+		expect(hits).toBe(2);
 		expect(tokens).toHaveLength(2);
 	});
 

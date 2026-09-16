@@ -4,6 +4,7 @@
 	"compatibility_date": "2026-09-01",
 	"compatibility_flags": ["nodejs_als"],
 	"kv_namespaces": [{ "binding": "BUDGET", "id": "bb0be48a2cf1493fadf36112d6ece9b6" }],
+	"r2_buckets": [{ "binding": "SHARE", "bucket_name": "blr-share" }],
 	"vars": {
 		"AI_MODE": "mock",
 		"TURNSTILE_SITE_KEY": "1x00000000000000000000AA",

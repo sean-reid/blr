@@ -7,6 +7,10 @@
 	import { Pipeline, STAGE_LABEL } from '$lib/pipeline.svelte';
 	import { Session } from '$lib/session';
 	import { speakersOf } from '$lib/transcript/lines';
+	import { posterFrame, uploadShare } from '$lib/share/client';
+	import { toShareLines } from '$lib/share/lines';
+	import type { ShareResult } from '$lib/share/types';
+	import { resolve } from '$app/paths';
 
 	let { data } = $props();
 	let challenge = $state<HTMLDivElement | null>(null);
@@ -20,6 +24,9 @@
 	let video = $state<HTMLVideoElement | null>(null);
 	let time = $state(0);
 	let useMixed = $state(true);
+	let sharing = $state<number | null>(null);
+	let shared = $state<(ShareResult & { output: string }) | null>(null);
+	let copied = $state(false);
 
 	let current = $derived(
 		pipeline.lines.find((l) => time >= l.start && time < l.end + 0.15)?.id ?? null
@@ -32,8 +39,15 @@
 			])
 		)
 	);
-	let busy = $derived(!['idle', 'ready', 'failed'].includes(pipeline.stage));
+	let busy = $derived(!['idle', 'ready', 'failed'].includes(pipeline.stage) || sharing !== null);
 	let speakers = $derived(speakersOf(pipeline.lines));
+	let link = $derived(
+		shared && !pipeline.stale && pipeline.output?.url === shared.output ? shared : null
+	);
+	let label = $derived(sharing !== null ? 'Sharing.' : STAGE_LABEL[pipeline.stage]);
+	let fraction = $derived(
+		sharing !== null ? sharing : pipeline.stage === 'exporting' ? pipeline.progress : null
+	);
 
 	function take(f: File) {
 		file = f;
@@ -58,6 +72,34 @@
 		a.click();
 	}
 
+	async function share() {
+		if (!url || sharing !== null) return;
+		const out = await pipeline.export();
+		if (!out) return;
+		sharing = 0;
+		pipeline.error = null;
+		try {
+			const [blob, poster] = await Promise.all([
+				fetch(out.url).then((r) => r.blob()),
+				posterFrame(url, pipeline.lines[0]?.start ?? 0)
+			]);
+			const lines = toShareLines(pipeline.lines, (id) => pipeline.text(id));
+			const result = await uploadShare(blob, poster, lines, (f) => (sharing = f));
+			shared = { ...result, output: out.url };
+		} catch (e) {
+			pipeline.error = e instanceof Error ? e.message : String(e);
+		} finally {
+			sharing = null;
+		}
+	}
+
+	async function copy() {
+		if (!link) return;
+		await navigator.clipboard.writeText(link.url);
+		copied = true;
+		setTimeout(() => (copied = false), 2000);
+	}
+
 	function seek(t: number) {
 		if (!video) return;
 		video.currentTime = t;
@@ -70,10 +112,7 @@
 		<div class="frame">
 			<Player src={url} mixed={pipeline.mixed} {useMixed} bind:video ontime={(t) => (time = t)} />
 			{#if busy}
-				<Progress
-					label={STAGE_LABEL[pipeline.stage]}
-					fraction={pipeline.stage === 'exporting' ? pipeline.progress : null}
-				/>
+				<Progress {label} {fraction} />
 			{/if}
 		</div>
 
@@ -115,6 +154,24 @@
 						<button type="button" class="primary" disabled={busy} onclick={download}>
 							Download
 						</button>
+						{#if link}
+							<div class="link">
+								<a
+									href={resolve('/s/[id]', { id: link.id })}
+									class="mono"
+									target="_blank"
+									rel="noopener"
+								>
+									{link.url.replace(/^https?:\/\//, '')}
+								</a>
+								<button type="button" class="plain" onclick={copy}>
+									{copied ? 'Copied' : 'Copy'}
+								</button>
+								<span class="mono muted">Expires in 7 days</span>
+							</div>
+						{:else}
+							<button type="button" class="primary" disabled={busy} onclick={share}> Share </button>
+						{/if}
 					{:else}
 						<button
 							type="button"
@@ -174,9 +231,22 @@
 
 	.run {
 		display: flex;
+		flex-wrap: wrap;
 		align-items: center;
-		gap: 20px;
+		gap: 12px 20px;
 		margin-left: auto;
+	}
+
+	.link {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 4px 12px;
+	}
+
+	.link a {
+		color: var(--accent);
+		word-break: break-all;
 	}
 
 	.toggle {
