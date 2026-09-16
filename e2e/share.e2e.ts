@@ -1,7 +1,9 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 import { readFileSync } from 'node:fs';
+import { bearer } from './session';
 
 const tidy = (s: string) => s.replace(/\s+/g, ' ').trim();
+const UNVERIFIED = 'Verification failed. Reload and try again.';
 
 test('share uploads the mix and the link plays it back with captions', async ({
 	page,
@@ -21,10 +23,16 @@ test('share uploads the mix and the link plays it back with captions', async ({
 		tidy
 	);
 
+	const uploads: (string | undefined)[] = [];
+	page.on('request', (r) => {
+		if (r.url().endsWith('/api/share')) uploads.push(r.headers()['authorization']);
+	});
 	await page.getByRole('button', { name: 'Share' }).click();
 	await expect(page.getByRole('status')).toContainText(/Exporting|Sharing/, { timeout: 30_000 });
 	const link = page.locator('.link a');
 	await expect(link).toBeVisible({ timeout: 120_000 });
+	expect(uploads).toHaveLength(1);
+	expect(uploads[0]).toMatch(/^Bearer \d+\.[\w-]+$/);
 	await expect(page.getByText('Expires in 7 days')).toBeVisible();
 	const href = new URL((await link.getAttribute('href'))!, baseURL).toString();
 	expect(href).toMatch(/\/s\/[23456789a-hj-km-np-z]{10}$/);
@@ -142,10 +150,27 @@ test('an unknown id is a plain 404', async ({ page, request }) => {
 	}
 });
 
+test('the share route needs a session token', async ({ request, baseURL }) => {
+	const origin = { origin: baseURL! };
+	const anonymous = await request.put('/api/share', {
+		headers: origin,
+		multipart: { transcript: '[]' }
+	});
+	expect(anonymous.status()).toBe(401);
+	expect((await anonymous.json()).message).toBe(UNVERIFIED);
+
+	const forged = await request.put('/api/share', {
+		headers: { ...origin, authorization: 'Bearer 9999999999999.forged' },
+		multipart: { transcript: '[]' }
+	});
+	expect(forged.status()).toBe(401);
+	expect((await forged.json()).message).toBe(UNVERIFIED);
+});
+
 test('the share route rejects bad uploads with a reason', async ({ request, baseURL }) => {
 	const poster = readFileSync('static/favicon.svg');
-	const headers = { origin: baseURL! };
-	const plain = await request.put('/api/share', { data: { hi: 1 } });
+	const headers = { origin: baseURL!, ...(await bearer(request)) };
+	const plain = await request.put('/api/share', { headers, data: { hi: 1 } });
 	expect(plain.status()).toBe(415);
 	expect((await plain.json()).message).toBe('Send the share as multipart form data.');
 
