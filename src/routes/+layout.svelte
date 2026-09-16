@@ -9,8 +9,8 @@
 </script>
 
 <svelte:head>
-	<title>BLR</title>
-	<meta name="description" content="Bad lip reading generator. Runs in your browser." />
+	<meta name="theme-color" content="#f5f1ea" media="(prefers-color-scheme: light)" />
+	<meta name="theme-color" content="#14120f" media="(prefers-color-scheme: dark)" />
 </svelte:head>
 
 {@render children()}

@@ -79,3 +79,25 @@ test('refuses a video over 3 minutes before upload', async ({ page }) => {
 	expect(uploads).toHaveLength(0);
 	await page.screenshot({ path: 'test-results/drop-too-long.png', fullPage: true });
 });
+
+test('the landing page carries social metadata and preloads its font', async ({
+	page,
+	request
+}) => {
+	await page.goto('/');
+	await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
+		'content',
+		'https://blr.dwainosaur.com/og.png'
+	);
+	await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute(
+		'content',
+		'summary_large_image'
+	);
+	const home = await request.get('/');
+	const link = home.headers()['link'] ?? '';
+	expect(link).toContain('as="font"');
+	expect(link).not.toContain('italic');
+	const og = await request.get('/og.png');
+	expect(og.status()).toBe(200);
+	expect(og.headers()['content-type']).toContain('image/png');
+});

@@ -7,6 +7,21 @@
 	let aboutOpen = $state(false);
 </script>
 
+<svelte:head>
+	<title>BLR</title>
+	<meta name="description" content="Bad lip reading generator. Runs in your browser." />
+	<meta property="og:site_name" content="BLR" />
+	<meta property="og:type" content="website" />
+	<meta property="og:title" content="BLR" />
+	<meta property="og:description" content="Bad lip reading generator. Runs in your browser." />
+	<meta property="og:url" content="https://blr.dwainosaur.com/" />
+	<meta property="og:image" content="https://blr.dwainosaur.com/og.png" />
+	<meta property="og:image:width" content="1200" />
+	<meta property="og:image:height" content="630" />
+	<meta name="twitter:card" content="summary_large_image" />
+	<link rel="canonical" href="https://blr.dwainosaur.com/" />
+</svelte:head>
+
 <header>
 	<a href={resolve('/')} class="wordmark" aria-label="BLR home">BLR</a>
 	<button
