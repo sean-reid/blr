@@ -40,13 +40,24 @@
 		)
 	);
 	let busy = $derived(!['idle', 'ready', 'failed'].includes(pipeline.stage) || sharing !== null);
+	let label = $derived.by(() => {
+		if (sharing !== null) return 'Sharing.';
+		if (pipeline.stage === 'separating' && pipeline.download) {
+			const mb = (pipeline.download.total / 1e6).toFixed(0);
+			const pct = Math.round((100 * pipeline.download.loaded) / pipeline.download.total);
+			return `Fetching the separation model, ${mb} MB. ${pct}%`;
+		}
+		return STAGE_LABEL[pipeline.stage];
+	});
+	let fraction = $derived.by(() => {
+		if (sharing !== null) return sharing;
+		if (pipeline.stage === 'exporting') return pipeline.progress;
+		if (pipeline.stage === 'separating' && !pipeline.download) return pipeline.progress;
+		return null;
+	});
 	let speakers = $derived(speakersOf(pipeline.lines));
 	let link = $derived(
 		shared && !pipeline.stale && pipeline.output?.url === shared.output ? shared : null
-	);
-	let label = $derived(sharing !== null ? 'Sharing.' : STAGE_LABEL[pipeline.stage]);
-	let fraction = $derived(
-		sharing !== null ? sharing : pipeline.stage === 'exporting' ? pipeline.progress : null
 	);
 
 	function take(f: File) {
@@ -109,7 +120,7 @@
 
 <section class="stage">
 	{#if file && url}
-		<div class="frame">
+		<div class="frame" data-separation={pipeline.separation}>
 			<Player src={url} mixed={pipeline.mixed} {useMixed} bind:video ontime={(t) => (time = t)} />
 			{#if busy}
 				<Progress {label} {fraction} />
@@ -188,6 +199,9 @@
 
 		<div class="meta mono muted">
 			<span>{file.name}</span>
+			{#if pipeline.separation === 'unavailable'}
+				<span class="note">Vocals kept under the new lines. Separation is unavailable here.</span>
+			{/if}
 			<button type="button" onclick={reset}>Remove</button>
 		</div>
 	{:else}
@@ -293,6 +307,11 @@
 		display: flex;
 		gap: 16px;
 		align-items: center;
+	}
+
+	.meta .note {
+		flex: 2;
+		white-space: normal;
 	}
 
 	.meta span {

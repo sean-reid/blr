@@ -4,9 +4,13 @@
 	"compatibility_date": "2026-09-01",
 	"compatibility_flags": ["nodejs_als"],
 	"kv_namespaces": [{ "binding": "BUDGET", "id": "bb0be48a2cf1493fadf36112d6ece9b6" }],
-	"r2_buckets": [{ "binding": "SHARE", "bucket_name": "blr-share" }],
+	"r2_buckets": [
+		{ "binding": "SHARE", "bucket_name": "blr-share" },
+		{ "binding": "MODELS", "bucket_name": "blr-models" }
+	],
 	"vars": {
 		"AI_MODE": "mock",
+		"DEV_PAGES": "1",
 		"TURNSTILE_SITE_KEY": "1x00000000000000000000AA",
 		"TURNSTILE_SECRET": "1x0000000000000000000000000000000AA",
 		"TOKEN_SECRET": "dev-only",

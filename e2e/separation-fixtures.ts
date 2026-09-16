@@ -1,8 +1,10 @@
+import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import type { Page } from '@playwright/test';
 import { spanRatioDb, type Span } from '../src/lib/audio/energy.ts';
 import { decodeWav, encodeWav } from '../src/lib/audio/wav.ts';
+import { MODEL_URL, RUNTIME_URL } from '../src/lib/audio/separate/config.ts';
 
 export const MODEL = process.env.BLR_MODEL ?? '/tmp/blr-models/Kim_Vocal_2.onnx';
 export const CLIP = process.env.BLR_CLIP ?? '/tmp/blr-clips/shy-demo.wav';
@@ -51,14 +53,37 @@ export function clipFile(seconds: number) {
 	};
 }
 
-/** Serves the model and the onnxruntime binary from local files so nothing leaves the machine. */
-export async function serveModel(page: Page) {
-	await page.route('**/models/Kim_Vocal_2.onnx', (route) =>
-		route.fulfill({ path: MODEL, contentType: 'application/octet-stream' })
-	);
-	for (const [file, contentType] of Object.entries(RUNTIME_FILES)) {
-		const path = fileURLToPath(import.meta.resolve(`onnxruntime-web/${file}`));
-		await page.route(`**/${file}`, (route) => route.fulfill({ path, contentType }));
+/** Puts the model and the onnxruntime files into the emulated R2 bucket the preview server reads. */
+export function seedModels() {
+	const key = (url: string) => url.replace(/^\/models\//, '');
+	const files: [string, string, string][] = [[key(MODEL_URL), MODEL, 'application/octet-stream']];
+	for (const [file, type] of Object.entries(RUNTIME_FILES)) {
+		files.push([
+			key(RUNTIME_URL) + file,
+			fileURLToPath(import.meta.resolve(`onnxruntime-web/${file}`)),
+			type
+		]);
+	}
+	for (const [objectKey, path, type] of files) {
+		execFileSync(
+			'pnpm',
+			[
+				'exec',
+				'wrangler',
+				'r2',
+				'object',
+				'put',
+				`blr-models/${objectKey}`,
+				'--file',
+				path,
+				'--content-type',
+				type,
+				'--local',
+				'-c',
+				'wrangler.dev.jsonc'
+			],
+			{ stdio: 'ignore' }
+		);
 	}
 }
 

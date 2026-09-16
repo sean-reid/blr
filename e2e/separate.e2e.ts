@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 import { decodeWav } from '../src/lib/audio/wav.ts';
 import {
 	CLIP,
@@ -6,17 +6,18 @@ import {
 	downloadStem,
 	fixturesPresent,
 	runSeparation,
-	serveModel,
+	seedModels,
 	speechToGapDb
 } from './separation-fixtures.ts';
 
 const SECONDS = 10;
 
 test.skip(!fixturesPresent(), `needs the model at ${MODEL} and the clip at ${CLIP}`);
+test.use({ separation: true });
+test.beforeAll(() => seedModels());
 
 test('separates speech from a 10 s clip on the wasm provider', async ({ page }) => {
 	test.setTimeout(10 * 60 * 1000);
-	await serveModel(page);
 	await page.goto('/dev/separate');
 	await expect(page.getByRole('heading', { name: 'Separation test bench' })).toBeVisible();
 	const clip = await runSeparation(page, 'WASM only', SECONDS);

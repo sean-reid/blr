@@ -3,6 +3,7 @@ declare global {
 		interface Platform {
 			env: Env;
 			ctx: ExecutionContext;
+			caches: CacheStorage & { default: Cache };
 		}
 	}
 

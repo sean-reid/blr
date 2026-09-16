@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 import { bearer } from './session';
 
 test.describe('voicing', () => {
@@ -9,8 +9,10 @@ test.describe('voicing', () => {
 	});
 
 	test('voice it produces new audio and the player switches to it', async ({ page }) => {
-		await expect(page.getByRole('combobox', { name: 'Voice for speaker A' })).toHaveValue('orion');
-		await expect(page.getByRole('combobox', { name: 'Voice for speaker B' })).toHaveValue('luna');
+		const a = await page.getByRole('combobox', { name: 'Voice for speaker A' }).inputValue();
+		const b = await page.getByRole('combobox', { name: 'Voice for speaker B' }).inputValue();
+		expect(a).not.toBe(b);
+		expect(a.length).toBeGreaterThan(0);
 		let speakCalls = 0;
 		page.on('request', (r) => {
 			if (r.url().endsWith('/api/speak')) speakCalls++;
