@@ -1,24 +1,33 @@
 <script lang="ts">
 	import type { Line } from '$lib/transcript/types';
 	import type { Ranked } from '$lib/rewrite/client';
+	import type { Names } from '$lib/transcript/names';
+	import SpeakerName from './SpeakerName.svelte';
 
 	let {
 		lines,
 		rewrites,
 		current = null,
+		names = {},
+		muted = {},
 		onseek,
 		onreroll,
-		onedit
+		onedit,
+		onmute,
+		onrename
 	}: {
 		lines: Line[];
 		rewrites: Record<string, { current: Ranked | null; busy: boolean }>;
 		current?: string | null;
+		names?: Names;
+		muted?: Record<string, boolean>;
 		onseek?: (t: number) => void;
 		onreroll?: (id: string) => void;
 		onedit?: (id: string, text: string) => void;
+		onmute?: (id: string) => void;
+		onrename?: (speaker: number, name: string) => void;
 	} = $props();
 
-	const letters = 'ABCDEFGH';
 	let editing = $state<string | null>(null);
 
 	function fmt(s: number) {
@@ -42,13 +51,15 @@
 		{@const rw = rewrites[line.id]}
 		{@const words = rw?.current ? rw.current.text.split(' ') : []}
 		{@const sc = rw?.current?.perWord ?? []}
+		{@const isMuted = !!muted[line.id]}
 		<li
 			class:current={line.id === current}
+			class:muted={isMuted}
 			style:--swatch="var(--speaker-{'abcdefgh'[line.speaker] ?? 'a'})"
 		>
-			<button type="button" class="speaker" aria-label="Speaker {letters[line.speaker] ?? '?'}">
-				{letters[line.speaker] ?? '?'}
-			</button>
+			<div class="speaker">
+				<SpeakerName speaker={line.speaker} {names} {onrename} />
+			</div>
 			<div class="body">
 				<button type="button" class="original" onclick={() => onseek?.(line.start)}>
 					<span class="time mono muted">{fmt(line.start)}</span>
@@ -91,16 +102,28 @@
 					{/if}
 				{/if}
 			</div>
-			<button
-				type="button"
-				class="reroll mono"
-				aria-label="Reroll line {i + 1}"
-				disabled={!rw || rw.busy}
-				class:muted={!rw?.current}
-				onclick={() => onreroll?.(line.id)}
-			>
-				{rw?.busy ? '…' : 'Reroll'}
-			</button>
+			<div class="tools">
+				<button
+					type="button"
+					class="tool mono"
+					aria-label="Reroll line {i + 1}"
+					disabled={!rw || rw.busy}
+					class:muted={!rw?.current}
+					onclick={() => onreroll?.(line.id)}
+				>
+					{rw?.busy ? '…' : 'Reroll'}
+				</button>
+				<button
+					type="button"
+					class="tool mute mono"
+					class:on={isMuted}
+					aria-label="Mute line {i + 1}"
+					aria-pressed={isMuted}
+					onclick={() => onmute?.(line.id)}
+				>
+					{isMuted ? 'Muted' : 'Mute'}
+				</button>
+			</div>
 		</li>
 	{/each}
 </ol>
@@ -115,7 +138,7 @@
 
 	li {
 		display: grid;
-		grid-template-columns: 32px 1fr auto;
+		grid-template-columns: minmax(32px, auto) 1fr auto;
 		gap: 12px;
 		padding: 10px 0;
 		border-top: 1px solid var(--ink-hairline);
@@ -126,16 +149,7 @@
 	}
 
 	.speaker {
-		width: 32px;
-		height: 32px;
 		margin-top: 2px;
-		display: grid;
-		place-items: center;
-		border: 1px solid var(--swatch);
-		border-radius: var(--radius);
-		color: var(--swatch);
-		font-size: 0.8125rem;
-		font-weight: 600;
 	}
 
 	.body {
@@ -208,18 +222,56 @@
 		color: var(--accent);
 	}
 
-	.reroll {
-		align-self: start;
+	li.muted .new {
+		color: var(--ink-muted);
+		text-decoration: line-through;
+		text-decoration-color: var(--ink-muted);
+	}
+
+	li.muted .new:hover {
+		text-decoration: line-through underline;
+	}
+
+	.tools {
+		display: flex;
+		align-items: start;
+		gap: 4px;
+	}
+
+	.tool {
 		min-height: var(--tap);
 		padding-inline: 4px;
 		color: var(--ink-muted);
 	}
 
-	.reroll:hover:not(:disabled) {
+	.tool:hover:not(:disabled) {
 		color: var(--ink);
 	}
 
-	.reroll:disabled {
+	.tool:disabled {
 		cursor: default;
+	}
+
+	.mute.on {
+		color: var(--ink);
+	}
+
+	@media (hover: hover) {
+		.mute:not(.on) {
+			opacity: 0;
+			transition: opacity var(--t-fast) var(--ease);
+		}
+
+		li:hover .mute,
+		li:focus-within .mute {
+			opacity: 1;
+		}
+	}
+
+	@media (max-width: 480px) {
+		.tools {
+			flex-direction: column;
+			gap: 0;
+		}
 	}
 </style>
