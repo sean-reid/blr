@@ -1,13 +1,16 @@
 import {
-	ALL_FORMATS,
 	AudioBufferSource,
 	BlobSource,
 	BufferTarget,
 	Conversion,
 	Input,
+	MATROSKA,
+	MP4,
 	Mp4OutputFormat,
 	Output,
 	QUALITY_HIGH,
+	QTFF,
+	WEBM,
 	getFirstEncodableAudioCodec
 } from 'mediabunny';
 import type { Pcm } from '$lib/audio/mix';
@@ -25,7 +28,7 @@ export async function remux(
 	mixed: Pcm,
 	onProgress?: (p: number) => void
 ): Promise<RemuxResult> {
-	const input = new Input({ formats: ALL_FORMATS, source: new BlobSource(file) });
+	const input = new Input({ formats: [MP4, QTFF, WEBM, MATROSKA], source: new BlobSource(file) });
 	const output = new Output({
 		format: new Mp4OutputFormat({ fastStart: 'in-memory' }),
 		target: new BufferTarget()
@@ -65,10 +68,4 @@ function toAudioBuffer(pcm: Pcm): AudioBuffer {
 	const buffer = ctx.createBuffer(pcm.channels.length, pcm.channels[0].length, pcm.rate);
 	pcm.channels.forEach((ch, i) => buffer.copyToChannel(new Float32Array(ch), i));
 	return buffer;
-}
-
-export function outputName(original: string): string {
-	const dot = original.lastIndexOf('.');
-	const stem = dot > 0 ? original.slice(0, dot) : original;
-	return `${stem}.blr.mp4`;
 }
